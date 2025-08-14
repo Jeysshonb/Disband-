@@ -294,87 +294,43 @@ def load_css():
     """, unsafe_allow_html=True)
 
 def check_dependencies():
-    """Simple check - if demucs works, we're good"""
+    """Simple check - either works or doesn't"""
     try:
         import demucs
-        return True, "✅ Listo para separar!"
-    except ImportError:
-        return False, "⏳ Instalando IA..."
+        import torch
+        return True, "✅ Listo!"
+    except ImportError as e:
+        return False, f"❌ Falta: {str(e)}"
 
-def separate_audio_safe(uploaded_file, model, output_format):
-    """Safe audio separation with error handling"""
-    import subprocess
-    import sys
-    import tempfile
-    from pathlib import Path
+def show_installation_error():
+    """Show that user needs to wait for Streamlit Cloud deployment"""
+    st.markdown("""
+    <div class="warning-message">
+        <h3>⏳ Esperando Deployment</h3>
+        <p><strong>Streamlit Cloud aún está instalando las dependencias</strong></p>
+        <p>Esto es normal en el primer deployment o después de cambios</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    try:
-        # Try to import demucs
-        import demucs
-        # If we get here, demucs is available
-        return separate_audio(uploaded_file, model, output_format)
-        
-    except ImportError:
-        # Demucs not available, show clear installation progress
-        st.markdown("""
-        <div class="progress-container">
-            <div class="progress-icon">⚙️</div>
-            <h3>🔧 Instalando IA por primera vez</h3>
-            <p>Descargando Demucs (modelo de IA)...</p>
-            <p><strong>Esto toma 3-5 minutos. ¡Solo pasa una vez!</strong></p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        progress_bar = st.progress(0)
-        status_text = st.empty()
-        
-        try:
-            status_text.text("📦 Descargando PyTorch...")
-            progress_bar.progress(20)
-            
-            # Install torch first
-            result1 = subprocess.run([
-                sys.executable, "-m", "pip", "install", "torch", "torchaudio", "--quiet"
-            ], capture_output=True, text=True, timeout=300)
-            
-            if result1.returncode != 0:
-                st.error(f"❌ Error instalando PyTorch: {result1.stderr}")
-                return False, {}, "Error instalando PyTorch"
-            
-            status_text.text("🧠 Instalando Demucs IA...")
-            progress_bar.progress(60)
-            
-            # Install demucs
-            result2 = subprocess.run([
-                sys.executable, "-m", "pip", "install", "demucs", "--quiet"
-            ], capture_output=True, text=True, timeout=300)
-            
-            if result2.returncode != 0:
-                st.error(f"❌ Error instalando Demucs: {result2.stderr}")
-                return False, {}, "Error instalando Demucs"
-            
-            status_text.text("✅ Instalación completa!")
-            progress_bar.progress(100)
-            
-            st.success("🎉 ¡IA instalada correctamente! Ahora procesando tu audio...")
-            
-            # Clear progress indicators
-            progress_bar.empty()
-            status_text.empty()
-            
-            # Now try to separate audio
-            return separate_audio(uploaded_file, model, output_format)
-            
-        except subprocess.TimeoutExpired:
-            st.error("⏰ Instalación tomó demasiado tiempo. Intenta recargar la página.")
-            return False, {}, "Timeout en instalación"
-        except Exception as e:
-            st.error(f"❌ Error durante instalación: {str(e)}")
-            return False, {}, f"Error de instalación: {str(e)}"
+    st.info("""
+    **⏰ Tiempo estimado de deployment:** 5-10 minutos
     
-    except Exception as e:
-        st.error(f"❌ Error inesperado: {str(e)}")
-        return False, {}, f"Error: {str(e)}"
+    **📋 Qué está pasando:**
+    - Streamlit Cloud está descargando PyTorch y Demucs
+    - Solo pasa durante el deployment inicial
+    - Una vez listo, la app funciona instantáneamente
+    
+    **🔄 Qué hacer:**
+    1. Espera 5-10 minutos
+    2. Refresca esta página
+    3. ¡Disfruta separando stems!
+    """)
+    
+    if st.button("🔄 Verificar de Nuevo", use_container_width=True):
+        st.rerun()
+        
+    st.markdown("---")
+    st.markdown("💡 **Tip:** Esta espera solo pasa una vez. Después será instantáneo.")
 
 def get_model_info():
     """Get information about available models"""
@@ -441,7 +397,7 @@ def create_model_card(model_key, model_info, selected_model):
     """
 
 def separate_audio(uploaded_file, model, output_format):
-    """Separate audio using Demucs with detailed progress"""
+    """Separate audio using Demucs"""
     try:
         # Create temp directory
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -473,23 +429,22 @@ def separate_audio(uploaded_file, model, output_format):
             
             cmd.append(str(input_path))
             
-            # Show processing message
+            # Show simple processing message
             st.markdown("""
             <div class="progress-container">
                 <div class="progress-icon">🎵</div>
-                <h3>🚀 IA trabajando en tu música</h3>
-                <p>Separando con máxima calidad profesional...</p>
+                <h3>🚀 Separando con IA Profesional</h3>
                 <p><strong>Tiempo estimado: 15-30 minutos</strong></p>
+                <p>Procesando con máxima calidad...</p>
             </div>
             """, unsafe_allow_html=True)
             
-            # Progress tracking
+            # Simple progress tracking
             progress_bar = st.progress(0)
             status_text = st.empty()
-            log_container = st.container()
             
             # Execute separation
-            status_text.text("🔄 Iniciando separación de IA...")
+            status_text.text("🔄 Iniciando separación...")
             progress_bar.progress(10)
             
             process = subprocess.Popen(
@@ -499,44 +454,36 @@ def separate_audio(uploaded_file, model, output_format):
                 text=True
             )
             
-            # Read output with better progress tracking
+            # Simple progress updates
             logs = []
+            current_progress = 10
+            
             for line in process.stdout:
                 line = line.strip()
                 if line:
                     logs.append(line)
-                    if len(logs) > 20:
-                        logs.pop(0)
                     
-                    # Update progress based on output
-                    if "Loading" in line or "loading" in line:
-                        status_text.text("📂 Cargando modelo de IA...")
-                        progress_bar.progress(30)
-                    elif "Separating" in line or "Processing" in line:
-                        status_text.text("🎯 Separando instrumentos...")
-                        progress_bar.progress(60)
-                    elif "Saving" in line or "Writing" in line:
-                        status_text.text("💾 Guardando resultados...")
-                        progress_bar.progress(90)
-                    elif "%" in line:
-                        # Try to extract percentage if available
-                        try:
-                            import re
-                            percent_match = re.search(r'(\d+)%', line)
-                            if percent_match:
-                                percent = int(percent_match.group(1))
-                                progress_bar.progress(min(30 + (percent * 0.6), 95))
-                        except:
-                            pass
-                    
-                    # Show recent logs
-                    with log_container:
-                        if logs:
-                            st.code('\n'.join(logs[-5:]), language='text')
+                    # Simple progress based on keywords
+                    if any(word in line.lower() for word in ['loading', 'model']):
+                        if current_progress < 30:
+                            status_text.text("📂 Cargando modelo...")
+                            progress_bar.progress(30)
+                            current_progress = 30
+                    elif any(word in line.lower() for word in ['separating', 'processing']):
+                        if current_progress < 70:
+                            status_text.text("🎯 Separando instrumentos...")
+                            progress_bar.progress(70)
+                            current_progress = 70
+                    elif any(word in line.lower() for word in ['saving', 'writing']):
+                        if current_progress < 90:
+                            status_text.text("💾 Guardando stems...")
+                            progress_bar.progress(90)
+                            current_progress = 90
             
             process.wait()
             
-            status_text.text("✅ Procesamiento completado!")
+            # Final status
+            status_text.text("✅ ¡Completado!")
             progress_bar.progress(100)
             
             if process.returncode == 0:
@@ -553,19 +500,18 @@ def separate_audio(uploaded_file, model, output_format):
                         with open(stem_file, "rb") as f:
                             stem_files[stem_file.name] = f.read()
                     
-                    # Clear progress indicators
+                    # Clear progress
                     progress_bar.empty()
                     status_text.empty()
-                    log_container.empty()
                     
-                    return True, stem_files, f"🎉 ¡{len(stem_files)} stems generados con éxito!"
+                    return True, stem_files, f"🎉 ¡{len(stem_files)} stems creados!"
                 else:
-                    return False, {}, "❌ No se encontraron archivos de salida"
+                    return False, {}, "❌ No se generaron archivos"
             else:
-                return False, {}, f"❌ Error durante la separación (código: {process.returncode})"
+                return False, {}, "❌ Error en el procesamiento"
                 
     except Exception as e:
-        return False, {}, f"❌ Error inesperado: {str(e)}"
+        return False, {}, f"❌ Error: {str(e)}"
 
 def create_zip_download(stem_files, original_filename):
     """Create ZIP file for download"""
@@ -599,13 +545,14 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Check dependencies but always show interface
+    # Check dependencies - must be pre-installed
     deps_ok, deps_msg = check_dependencies()
     
     if not deps_ok:
-        st.info(f"🔧 {deps_msg} La interfaz está disponible pero el procesamiento se activará cuando termine la instalación.")
+        show_installation_error()
+        return
     
-    # Always show main interface
+    # Dependencies OK - show full interface
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -651,8 +598,7 @@ def main():
             with col_process_single:
                 st.markdown("<br>", unsafe_allow_html=True)  # Spacing
                 if not st.session_state.processing and not st.session_state.stems_ready:
-                    button_text = "🚀 Procesar con Máxima Calidad" if deps_ok else "🔧 Instalar e Procesar"
-                    if st.button(button_text, use_container_width=True, type="primary"):
+                    if st.button("🚀 Procesar con Máxima Calidad", use_container_width=True, type="primary"):
                         st.session_state.processing = True
                         st.session_state.stems_ready = False
                         st.session_state.stem_files = {}
@@ -698,9 +644,9 @@ def main():
         </div>
         """, unsafe_allow_html=True)
     
-    # Processing section - always allow processing
+    # Processing section - only if dependencies are ready
     if st.session_state.processing and uploaded_file:
-        success, stem_files, message = separate_audio_safe(uploaded_file, selected_model, output_format)
+        success, stem_files, message = separate_audio(uploaded_file, selected_model, output_format)
         
         if success:
             st.session_state.stem_files = stem_files
