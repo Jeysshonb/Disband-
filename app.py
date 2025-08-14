@@ -379,8 +379,8 @@ def separate_audio_pro(uploaded_file):
     progress_bar.empty()
     status_text.empty()
     
-    # Create high-quality separated audio files
-    audio_data = uploaded_file.getbuffer()
+    # ARREGLO: Convertir el buffer a bytes correctamente
+    audio_data = bytes(uploaded_file.getbuffer())  # Convertir a bytes
     
     # Generate professional stems (simulated high-quality separation)
     stems = {
@@ -397,9 +397,13 @@ def create_premium_zip(stem_files, original_name):
     zip_buffer = BytesIO()
     
     with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED, compresslevel=9) as zip_file:
-        # Add stems
+        # Add stems - ARREGLO: Asegurar que son bytes
         for filename, file_data in stem_files.items():
-            zip_file.writestr(filename, file_data)
+            if isinstance(file_data, bytes):
+                zip_file.writestr(filename, file_data)
+            else:
+                # Convertir a bytes si no lo es
+                zip_file.writestr(filename, bytes(file_data))
         
         # Add premium info file
         info_content = f"""
@@ -420,7 +424,7 @@ Files Included:
 Thank you for using DISBAND!
 For support: @jeysshon
 """
-        zip_file.writestr("README.txt", info_content.encode())
+        zip_file.writestr("README.txt", info_content.encode('utf-8'))
     
     zip_buffer.seek(0)
     return zip_buffer.getvalue()
@@ -644,9 +648,15 @@ def main():
             
             for filename, file_data in st.session_state.stem_files.items():
                 if filename in download_info:
+                    # ARREGLO: Asegurar que file_data es bytes
+                    if isinstance(file_data, bytes):
+                        data_to_download = file_data
+                    else:
+                        data_to_download = bytes(file_data)
+                    
                     st.download_button(
                         label=f"⬇️ {download_info[filename]}",
-                        data=file_data,
+                        data=data_to_download,
                         file_name=filename,
                         mime="audio/wav",
                         key=f"download_{filename}"
