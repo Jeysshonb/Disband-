@@ -32,11 +32,13 @@ def install_if_missing():
     
     try:
         import torch
+        st.success(f"✅ PyTorch {torch.__version__}")
     except ImportError:
         missing.append("torch")
     
     try:
         import demucs
+        st.success(f"✅ Demucs disponible")
     except ImportError:
         missing.append("demucs")
     
@@ -49,14 +51,14 @@ def install_if_missing():
     for package in missing:
         try:
             if package == "torch":
-                # PyTorch CPU-only para evitar problemas
+                # PyTorch versión compatible con Python 3.13
                 cmd = [sys.executable, "-m", "pip", "install", 
-                      "torch==2.0.1+cpu", "torchaudio==2.0.2+cpu", 
-                      "-f", "https://download.pytorch.org/whl/torch_stable.html",
+                      "torch>=2.5.0", "torchaudio>=2.5.0", 
+                      "--index-url", "https://download.pytorch.org/whl/cpu",
                       "--no-cache-dir"]
             elif package == "demucs":
                 cmd = [sys.executable, "-m", "pip", "install", 
-                      "demucs==4.0.1", "--no-cache-dir"]
+                      "demucs", "--no-cache-dir"]
             
             result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
             
@@ -230,4 +232,4 @@ Path: {sys.path[0]}
     st.markdown("🎵 **Disband Simple** - Sin requirements.txt, instalación manual")
 
 if __name__ == "__main__":
-    main()
+    main()    
