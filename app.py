@@ -521,9 +521,10 @@ def main():
     
     if not deps_ok:
         show_dependency_error()
-        return
+        # Don't return - show the interface anyway for testing
+        st.warning("⚠️ Some features may not work until dependencies are installed")
     
-    # Main interface
+    # Main interface (always show)
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -575,7 +576,9 @@ def main():
             
             with col_process:
                 st.markdown("<br>", unsafe_allow_html=True)  # Spacing
-                if not st.session_state.processing and not st.session_state.stems_ready:
+                if not deps_ok:
+                    st.button("🔄 Dependencies Installing...", disabled=True, use_container_width=True)
+                elif not st.session_state.processing and not st.session_state.stems_ready:
                     if st.button("🎯 Separate Stems", use_container_width=True):
                         st.session_state.processing = True
                         st.session_state.stems_ready = False
