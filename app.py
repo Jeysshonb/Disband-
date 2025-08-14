@@ -1,24 +1,27 @@
 #!/usr/bin/env python3
 """
-🎵 DISBAND - Separador Simple que SÍ Funciona
-Conecta con herramientas web gratuitas existentes
+🎵 DISBAND - Separación Local REAL
+Usando Spleeter que funciona sin APIs
 """
 
 import streamlit as st
-import requests
-import base64
-import time
+import subprocess
+import sys
+import tempfile
+import os
+import zipfile
+from pathlib import Path
 from io import BytesIO
+import time
 
 # Configuración de página
 st.set_page_config(
-    page_title="🎵 Disband - Simple & Working",
+    page_title="🎵 Disband - Local AI",
     page_icon="🎵",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# CSS minimalista
 def load_css():
     st.markdown("""
     <style>
@@ -31,54 +34,130 @@ def load_css():
         margin-bottom: 2rem; color: white;
     }
     
-    .hero-title {
-        font-size: 3.5rem; font-weight: 700; margin: 0;
-        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    .status-success {
+        background: #d4edda; border-left: 4px solid #28a745;
+        padding: 1rem; border-radius: 4px; margin: 1rem 0;
     }
     
-    .service-card {
-        background: white; border: 1px solid #e0e0e0;
-        border-radius: 12px; padding: 1.5rem; margin: 1rem 0;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    .status-processing {
+        background: #fff3cd; border-left: 4px solid #ffc107;
+        padding: 1rem; border-radius: 4px; margin: 1rem 0;
     }
     
-    .tutorial-card {
-        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
-        color: white; padding: 2rem; border-radius: 16px; margin: 2rem 0;
-    }
-    
-    .free-tools {
-        background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        color: white; padding: 2rem; border-radius: 16px; margin: 2rem 0;
+    .status-error {
+        background: #f8d7da; border-left: 4px solid #dc3545;
+        padding: 1rem; border-radius: 4px; margin: 1rem 0;
     }
     </style>
     """, unsafe_allow_html=True)
 
-def create_basic_separation(uploaded_file):
-    """
-    Separación básica usando técnicas de audio simple
-    """
+def check_and_install_spleeter():
+    """Verificar e instalar Spleeter si es necesario"""
     try:
-        # Leer el archivo
-        audio_data = uploaded_file.getbuffer()
-        
-        # Crear una "separación" básica
-        # Esto no es IA real, pero demuestra funcionalidad
-        
-        # Simular procesamiento
-        time.sleep(2)
-        
-        # Crear diferentes versiones del audio
-        stems = {
-            "original": audio_data,
-            "vocals_isolated": audio_data,  # En la realidad sería filtrado
-            "instrumental": audio_data      # En la realidad sería procesado
-        }
-        
-        return True, stems, "✅ Separación básica completada"
-        
+        # Verificar si Spleeter está instalado
+        import spleeter
+        return True, "✅ Spleeter ya instalado"
+    except ImportError:
+        # Instalar Spleeter
+        st.info("📦 Instalando Spleeter por primera vez...")
+        try:
+            # Instalar tensorflow (CPU)
+            subprocess.run([
+                sys.executable, "-m", "pip", "install", 
+                "tensorflow==2.10.0", "--quiet"
+            ], check=True)
+            
+            # Instalar spleeter
+            subprocess.run([
+                sys.executable, "-m", "pip", "install", 
+                "spleeter==2.3.2", "--quiet"
+            ], check=True)
+            
+            # Instalar ffmpeg-python
+            subprocess.run([
+                sys.executable, "-m", "pip", "install", 
+                "ffmpeg-python", "--quiet"
+            ], check=True)
+            
+            return True, "✅ Spleeter instalado correctamente"
+            
+        except subprocess.CalledProcessError as e:
+            return False, f"❌ Error instalando Spleeter: {e}"
+
+def separate_with_spleeter(uploaded_file, stems_count=2):
+    """Separar audio usando Spleeter local"""
+    try:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_path = Path(temp_dir)
+            
+            # Guardar archivo subido
+            input_file = temp_path / uploaded_file.name
+            with open(input_file, "wb") as f:
+                f.write(uploaded_file.getbuffer())
+            
+            # Directorio de salida
+            output_dir = temp_path / "output"
+            output_dir.mkdir()
+            
+            # Comando Spleeter
+            stems_config = f"spleeter:{stems_count}stems-16kHz"
+            
+            cmd = [
+                sys.executable, "-m", "spleeter", "separate",
+                str(input_file),
+                "-p", stems_config,
+                "-o", str(output_dir)
+            ]
+            
+            st.info(f"🎯 Ejecutando: spleeter separate con {stems_count} stems")
+            
+            # Ejecutar Spleeter
+            process = subprocess.run(
+                cmd, 
+                capture_output=True, 
+                text=True, 
+                timeout=600  # 10 minutos máximo
+            )
+            
+            if process.returncode == 0:
+                # Buscar archivos generados
+                stem_folder = output_dir / input_file.stem
+                
+                if stem_folder.exists():
+                    stem_files = {}
+                    
+                    # Leer archivos WAV generados
+                    for wav_file in stem_folder.glob("*.wav"):
+                        with open(wav_file, "rb") as f:
+                            stem_files[wav_file.name] = f.read()
+                    
+                    if stem_files:
+                        return True, stem_files, f"✅ {len(stem_files)} stems generados localmente"
+                    else:
+                        return False, {}, "❌ No se encontraron archivos de salida"
+                else:
+                    return False, {}, f"❌ Directorio no encontrado: {stem_folder}"
+            else:
+                error_msg = process.stderr if process.stderr else "Error desconocido"
+                return False, {}, f"❌ Error Spleeter: {error_msg}"
+                
+    except subprocess.TimeoutExpired:
+        return False, {}, "❌ Timeout: Procesamiento tomó más de 10 minutos"
     except Exception as e:
         return False, {}, f"❌ Error: {str(e)}"
+
+def create_download_zip(stems_dict, original_name):
+    """Crear ZIP con stems para descarga"""
+    zip_buffer = BytesIO()
+    
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for filename, file_data in stems_dict.items():
+            # Asegurar que file_data es bytes
+            if isinstance(file_data, bytes):
+                zip_file.writestr(filename, file_data)
+    
+    zip_buffer.seek(0)
+    return zip_buffer.getvalue()
 
 def main():
     load_css()
@@ -86,207 +165,223 @@ def main():
     # Header
     st.markdown("""
     <div class="hero-container">
-        <h1 class="hero-title">🎵 Disband</h1>
-        <p style="font-size: 1.3rem; margin: 1rem 0 0 0;">Separador de Stems - Herramientas Gratuitas</p>
-        <p style="font-size: 1rem; margin: 0.5rem 0 0 0; opacity: 0.8;">Conectando con las mejores herramientas gratis</p>
+        <h1 style="font-size: 3.5rem; font-weight: 700; margin: 0;">🎵 Disband</h1>
+        <p style="font-size: 1.3rem; margin: 1rem 0 0 0;">Separación Local con Spleeter</p>
+        <p style="font-size: 1rem; margin: 0.5rem 0 0 0; opacity: 0.8;">IA real funcionando en el servidor</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Explicación honesta
-    st.markdown("""
-    <div class="tutorial-card">
-        <h3>💡 ¿Por qué las APIs no funcionan?</h3>
-        <p>Las APIs gratuitas de IA tienen limitaciones:</p>
-        <ul>
-            <li><strong>Replicate:</strong> Requiere pago ($0.04 por uso)</li>
-            <li><strong>Hugging Face:</strong> APIs limitadas y restrictivas</li>
-            <li><strong>Otras:</strong> Tokens requeridos o cuotas excedidas</li>
-        </ul>
-        <p><strong>Solución:</strong> Te muestro las mejores herramientas web gratuitas que SÍ funcionan</p>
-    </div>
-    """, unsafe_allow_html=True)
+    # Verificar/instalar Spleeter
+    spleeter_ok, spleeter_msg = check_and_install_spleeter()
     
-    # Herramientas gratuitas reales
-    st.markdown("""
-    <div class="free-tools">
-        <h2>🆓 Herramientas que SÍ funcionan GRATIS</h2>
-        <p>Estas son opciones reales, probadas y que funcionan perfectamente:</p>
-    </div>
-    """, unsafe_allow_html=True)
+    if not spleeter_ok:
+        st.markdown(f"""
+        <div class="status-error">
+            <h3>🔧 Error de Instalación</h3>
+            <p>{spleeter_msg}</p>
+            <p>Recarga la página e intenta de nuevo.</p>
+        </div>
+        """, unsafe_allow_html=True)
+        return
     
-    col1, col2 = st.columns(2)
+    # Mostrar estado
+    st.markdown(f'<div class="status-success">{spleeter_msg}</div>', unsafe_allow_html=True)
+    
+    # Interfaz principal
+    col1, col2 = st.columns([2, 1])
     
     with col1:
-        st.markdown("""
-        <div class="service-card">
-            <h3>🎤 LALAL.AI (Freemium)</h3>
-            <p><strong>✅ Lo mejor:</strong></p>
-            <ul>
-                <li>3 separaciones GRATIS al registrarte</li>
-                <li>Calidad profesional</li>
-                <li>Funciona al 100%</li>
-                <li>Vocal + Instrumental</li>
-            </ul>
-            <p><strong>Cómo usar:</strong></p>
-            <ol>
-                <li>Ve a lalal.ai</li>
-                <li>Regístrate gratis</li>
-                <li>Sube tu MP3</li>
-                <li>Descarga stems</li>
-            </ol>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("### 📁 Subir Audio para Separación Local")
         
-        if st.button("🌐 Ir a LALAL.AI", use_container_width=True):
-            st.markdown("[Abrir LALAL.AI](https://lalal.ai)")
+        uploaded_file = st.file_uploader(
+            "Selecciona tu archivo de audio",
+            type=['mp3', 'wav', 'flac', 'm4a'],
+            help="Procesamiento 100% local con Spleeter"
+        )
+        
+        if uploaded_file:
+            file_size_mb = len(uploaded_file.getbuffer()) / (1024 * 1024)
+            st.success(f"✅ **{uploaded_file.name}** ({file_size_mb:.1f} MB)")
+            
+            # Configuración de stems
+            stems_option = st.selectbox(
+                "🎯 Tipo de separación:",
+                [2, 4, 5],
+                format_func=lambda x: {
+                    2: "🎤 2 stems: Vocals + Accompaniment",
+                    4: "🎵 4 stems: Vocals + Drums + Bass + Other", 
+                    5: "🎼 5 stems: Vocals + Drums + Bass + Piano + Other"
+                }[x],
+                index=0
+            )
+            
+            if st.button("🚀 Separar con IA Local", type="primary", use_container_width=True):
+                st.session_state.processing = True
+                st.session_state.uploaded_file = uploaded_file
+                st.session_state.stems_count = stems_option
+                st.rerun()
     
     with col2:
+        st.markdown("### 📊 Información")
+        if uploaded_file:
+            st.metric("Tamaño", f"{file_size_mb:.1f} MB")
+            st.metric("Método", "Spleeter (Local)")
+            st.metric("Costo", "🆓 Gratis")
+        
+        st.markdown("### ⚡ Características")
         st.markdown("""
-        <div class="service-card">
-            <h3>🎵 Vocal Remover (100% Gratis)</h3>
-            <p><strong>✅ Características:</strong></p>
-            <ul>
-                <li>Completamente GRATIS</li>
-                <li>Sin límites</li>
-                <li>Sin registro</li>
-                <li>Funciona en el navegador</li>
-            </ul>
-            <p><strong>Cómo usar:</strong></p>
-            <ol>
-                <li>Ve a vocalremover.org</li>
-                <li>Arrastra tu MP3</li>
-                <li>Espera 2-3 minutos</li>
-                <li>Descarga resultados</li>
-            </ol>
+        - 🏠 **100% Local** - Todo en el servidor
+        - 🤖 **IA Real** - Spleeter de Deezer
+        - 🆓 **Gratis** - Sin APIs externas
+        - ⚡ **Rápido** - 3-8 minutos
+        - 🎯 **2, 4 o 5 stems** según elijas
+        - 📦 **Descarga ZIP** automática
+        """)
+    
+    # Procesamiento
+    if st.session_state.get('processing', False):
+        uploaded_file = st.session_state.get('uploaded_file')
+        stems_count = st.session_state.get('stems_count', 2)
+        
+        st.markdown(f"""
+        <div class="status-processing">
+            <h3>🎯 Separando con Spleeter ({stems_count} stems)</h3>
+            <p>IA funcionando localmente en el servidor...</p>
+            <p>Esto puede tomar 3-8 minutos según el tamaño del archivo</p>
         </div>
         """, unsafe_allow_html=True)
         
-        if st.button("🌐 Ir a Vocal Remover", use_container_width=True):
-            st.markdown("[Abrir Vocal Remover](https://vocalremover.org)")
-    
-    # Opciones adicionales
-    st.markdown("### 🛠️ Más Opciones Gratuitas")
-    
-    col3, col4, col5 = st.columns(3)
-    
-    with col3:
-        st.markdown("""
-        **🎯 Melody ML**
-        - 2 canciones gratis/mes
-        - Registro con email
-        - Calidad muy buena
-        - [melody.ml](https://melody.ml)
-        """)
-    
-    with col4:
-        st.markdown("""
-        **🔊 Moises.ai**
-        - 5 canciones gratis
-        - App móvil disponible
-        - Separación de batería
-        - [moises.ai](https://moises.ai)
-        """)
-    
-    with col5:
-        st.markdown("""
-        **⚡ StemRoller**
-        - Gratis en Google Colab
-        - Requiere conocimiento técnico
-        - Usa IA avanzada
-        - [GitHub](https://github.com/stemrollerapp/stemroller)
-        """)
-    
-    # Demostración local
-    st.markdown("---")
-    st.markdown("### 🧪 Demo: Separación Básica Local")
-    
-    uploaded_file = st.file_uploader(
-        "📁 Prueba la funcionalidad básica",
-        type=['mp3', 'wav'],
-        help="Solo para demostrar que la app funciona"
-    )
-    
-    if uploaded_file:
-        file_size_mb = len(uploaded_file.getbuffer()) / (1024 * 1024)
-        st.info(f"📄 **{uploaded_file.name}** ({file_size_mb:.1f} MB)")
+        # Ejecutar separación
+        with st.spinner(f"🤖 Spleeter procesando {stems_count} stems..."):
+            success, stems, message = separate_with_spleeter(uploaded_file, stems_count)
         
-        if st.button("🧪 Demo de Separación", type="secondary"):
-            with st.spinner("🔄 Simulando separación..."):
-                success, stems, message = create_basic_separation(uploaded_file)
+        # Reset estado
+        st.session_state.processing = False
+        
+        if success:
+            st.session_state.stems = stems
+            st.session_state.stems_count = stems_count
             
-            if success:
-                st.success(message)
-                st.warning("""
-                ⚠️ **Nota:** Esta es solo una demostración. 
-                
-                Para separación real de alta calidad, usa las herramientas web recomendadas arriba.
-                """)
-                
-                for stem_name, stem_data in stems.items():
-                    st.download_button(
-                        f"⬇️ Descargar {stem_name}",
-                        data=stem_data,
-                        file_name=f"{stem_name}.mp3",
-                        mime="audio/mpeg"
-                    )
+            st.markdown(f"""
+            <div class="status-success">
+                <h3>🎉 ¡Separación Completada!</h3>
+                <p>{message}</p>
+            </div>
+            """, unsafe_allow_html=True)
+        else:
+            st.markdown(f"""
+            <div class="status-error">
+                <h3>❌ Error en Separación</h3>
+                <p>{message}</p>
+                <p><strong>Posibles soluciones:</strong></p>
+                <ul>
+                    <li>Intenta con un archivo más pequeño</li>
+                    <li>Usa formato MP3 o WAV</li>
+                    <li>Prueba con 2 stems en lugar de 4 o 5</li>
+                </ul>
+            </div>
+            """, unsafe_allow_html=True)
     
-    # Tutorial paso a paso
-    with st.expander("📖 Tutorial: Cómo separar stems gratis en 5 minutos"):
+    # Mostrar resultados
+    if st.session_state.get('stems'):
+        stems = st.session_state.stems
+        stems_count = st.session_state.get('stems_count', 2)
+        
+        st.markdown("### 🎵 Stems Generados")
+        
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**📁 Descargas Individuales:**")
+            
+            # Iconos para tipos de stems
+            stem_icons = {
+                "vocals": "🎤",
+                "accompaniment": "🎹", 
+                "drums": "🥁",
+                "bass": "🎸",
+                "other": "🎼",
+                "piano": "🎹"
+            }
+            
+            for filename, file_data in stems.items():
+                # Extraer tipo de stem del nombre de archivo
+                stem_type = filename.replace('.wav', '').lower()
+                icon = stem_icons.get(stem_type, "🎵")
+                
+                st.markdown(f"{icon} **{filename}**")
+                
+                # Botón de descarga individual
+                st.download_button(
+                    f"⬇️ Descargar {filename}",
+                    data=file_data,
+                    file_name=filename,
+                    mime="audio/wav",
+                    key=f"download_{filename}"
+                )
+        
+        with col2:
+            st.markdown("**📦 Descarga Completa:**")
+            
+            # Información de los stems
+            st.info(f"""
+            **📊 Información:**
+            - **Stems generados:** {len(stems)}
+            - **Formato:** WAV alta calidad
+            - **Modelo:** Spleeter {stems_count}-stems
+            - **Procesamiento:** 100% local
+            """)
+            
+            # ZIP download
+            if st.button("📦 Crear ZIP de Todos los Stems"):
+                with st.spinner("📦 Creando archivo ZIP..."):
+                    zip_data = create_download_zip(stems, uploaded_file.name)
+                    
+                    st.download_button(
+                        "⬇️ Descargar ZIP Completo",
+                        data=zip_data,
+                        file_name=f"{Path(uploaded_file.name).stem}_stems.zip",
+                        mime="application/zip"
+                    )
+        
+        # Botón para procesar otro archivo
+        if st.button("🔄 Procesar Otro Archivo", use_container_width=True):
+            for key in ['processing', 'stems', 'uploaded_file', 'stems_count']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
+    
+    # Información técnica
+    with st.expander("🔬 Información Técnica"):
         st.markdown("""
-        ### 🎯 Método más fácil (LALAL.AI):
+        ### 🤖 Sobre Spleeter
         
-        1. **Ve a [lalal.ai](https://lalal.ai)**
-        2. **Click "Try for free"**
-        3. **Regístrate** con email (30 segundos)
-        4. **Arrastra tu MP3** a la pantalla
-        5. **Espera 2-3 minutos** que procese
-        6. **Descarga** vocals + instrumental
-        7. **¡Listo!** - Tienes 2 usos más gratis
+        **Spleeter** es la librería de separación de fuentes de **Deezer** (como Spotify):
+        - Desarrollado por Deezer Research
+        - Usado en producción por Deezer
+        - Open source y gratuito
+        - Funciona completamente offline
         
-        ### 🔥 Método 100% gratis (Vocal Remover):
+        ### 📊 Modelos Disponibles
         
-        1. **Ve a [vocalremover.org](https://vocalremover.org)**
-        2. **Arrastra tu MP3** (sin registro)
-        3. **Espera** que procese online
-        4. **Descarga** karaoke + vocals
-        5. **Repite** cuantas veces quieras
+        - **2-stems**: Vocals + Accompaniment (más rápido)
+        - **4-stems**: Vocals + Drums + Bass + Other (balanceado)  
+        - **5-stems**: + Piano separado (más detallado)
         
-        ### 💡 Para uso profesional:
+        ### ⚡ Rendimiento
         
-        - **Agrega $5 a Replicate** → 125 separaciones de calidad profesional
-        - **LALAL.AI Pro** → $10/mes para uso ilimitado
-        - **Instala Spleeter localmente** → Gratis pero técnico
+        - **CPU**: Funciona sin GPU (más lento pero compatible)
+        - **Tiempo**: 3-8 minutos según archivo y stems
+        - **Calidad**: Profesional, usado por Deezer
+        - **Memoria**: ~2-4GB durante procesamiento
         """)
     
-    # Comparación honesta
-    st.markdown("### 📊 Comparación Honesta")
-    
-    comparison_data = """
-    | Herramienta | Costo | Calidad | Facilidad | Límites |
-    |-------------|-------|---------|-----------|---------|
-    | **LALAL.AI** | 3 gratis | ⭐⭐⭐⭐⭐ | Muy fácil | 3 canciones |
-    | **Vocal Remover** | 100% gratis | ⭐⭐⭐ | Súper fácil | Sin límites |
-    | **Replicate** | $0.04/uso | ⭐⭐⭐⭐⭐ | Medio | Requiere pago |
-    | **Moises.ai** | 5 gratis | ⭐⭐⭐⭐ | Fácil | 5 canciones |
-    | **Spleeter** | Gratis | ⭐⭐⭐⭐ | Difícil | Sin límites |
-    """
-    
-    st.markdown(comparison_data)
-    
-    # Footer con enlaces directos
+    # Footer
     st.markdown("---")
     st.markdown("""
-    <div style="text-align: center; padding: 2rem 0;">
-        <p><strong>🎵 Enlaces Directos a Herramientas que Funcionan:</strong></p>
-        <p>
-            <a href="https://lalal.ai" target="_blank" style="margin: 0 1rem;">🎤 LALAL.AI</a> |
-            <a href="https://vocalremover.org" target="_blank" style="margin: 0 1rem;">🔊 Vocal Remover</a> |
-            <a href="https://melody.ml" target="_blank" style="margin: 0 1rem;">🎯 Melody ML</a> |
-            <a href="https://moises.ai" target="_blank" style="margin: 0 1rem;">🎵 Moises.ai</a>
-        </p>
-        <p style="color: #666; margin-top: 1rem;">
-            Disband te conecta con las mejores herramientas gratuitas disponibles
-        </p>
+    <div style="text-align: center; color: #666; padding: 1rem 0;">
+        <p>🎵 <strong>Disband</strong> - Separación local con Spleeter</p>
+        <p>Powered by Deezer Research • 100% Local • Open Source</p>
     </div>
     """, unsafe_allow_html=True)
 
