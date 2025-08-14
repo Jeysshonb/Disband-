@@ -1,3 +1,2 @@
 streamlit
-spleeter==2.3.0
-tensorflow==2.5.0
+audio-separator
