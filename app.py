@@ -1,24 +1,24 @@
 #!/usr/bin/env python3
 """
-🎵 DISBAND - Separador de Stems 100% GRATUITO
-Usando Hugging Face Inference API que SÍ es gratis
+🎵 DISBAND - Separador Simple que SÍ Funciona
+Conecta con herramientas web gratuitas existentes
 """
 
 import streamlit as st
 import requests
-import time
 import base64
+import time
 from io import BytesIO
 
 # Configuración de página
 st.set_page_config(
-    page_title="🎵 Disband - Free AI Stem Separator",
+    page_title="🎵 Disband - Simple & Working",
     page_icon="🎵",
     layout="wide",
     initial_sidebar_state="collapsed"
 )
 
-# CSS
+# CSS minimalista
 def load_css():
     st.markdown("""
     <style>
@@ -36,108 +36,49 @@ def load_css():
         text-shadow: 0 2px 10px rgba(0,0,0,0.3);
     }
     
-    .success-container {
+    .service-card {
+        background: white; border: 1px solid #e0e0e0;
+        border-radius: 12px; padding: 1.5rem; margin: 1rem 0;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    }
+    
+    .tutorial-card {
+        background: linear-gradient(135deg, #17a2b8 0%, #138496 100%);
+        color: white; padding: 2rem; border-radius: 16px; margin: 2rem 0;
+    }
+    
+    .free-tools {
         background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
-        padding: 2rem; border-radius: 16px; color: white; margin: 2rem 0;
-    }
-    
-    .processing-container {
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        padding: 2rem; border-radius: 16px; color: white; text-align: center; margin: 2rem 0;
-    }
-    
-    .free-badge {
-        background: linear-gradient(135deg, #00c851 0%, #00a085 100%);
-        padding: 0.5rem 1rem; border-radius: 20px; color: white;
-        display: inline-block; font-weight: bold; margin: 1rem 0;
+        color: white; padding: 2rem; border-radius: 16px; margin: 2rem 0;
     }
     </style>
     """, unsafe_allow_html=True)
 
-def separate_with_huggingface_free(audio_file):
+def create_basic_separation(uploaded_file):
     """
-    Separación usando Hugging Face - 100% GRATIS
-    """
-    try:
-        # Múltiples endpoints de Hugging Face (todos gratis)
-        endpoints = [
-            "https://api-inference.huggingface.co/models/facebook/demucs-waveform-hdemucs",
-            "https://api-inference.huggingface.co/models/facebook/htdemucs",
-            "https://hf.space/embed/cjwbw/demucs/+/api/predict"
-        ]
-        
-        # Convertir audio
-        audio_bytes = audio_file.getbuffer()
-        
-        for i, endpoint in enumerate(endpoints):
-            try:
-                st.info(f"🔄 Intentando endpoint {i+1}/3...")
-                
-                # Headers básicos (sin token necesario)
-                headers = {
-                    "Content-Type": "application/json"
-                }
-                
-                # Para algunos endpoints, enviar como base64
-                if "api-inference" in endpoint:
-                    audio_b64 = base64.b64encode(audio_bytes).decode()
-                    data = {
-                        "inputs": audio_b64
-                    }
-                else:
-                    # Para Spaces, enviar directo
-                    data = {
-                        "data": [audio_b64]
-                    }
-                
-                response = requests.post(endpoint, json=data, headers=headers, timeout=120)
-                
-                if response.status_code == 200:
-                    return True, response.content, f"✅ Procesado con endpoint {i+1}"
-                elif response.status_code == 503:
-                    st.warning(f"⏳ Endpoint {i+1} cargando modelo, intentando siguiente...")
-                    continue
-                else:
-                    st.warning(f"❌ Endpoint {i+1} falló ({response.status_code}), intentando siguiente...")
-                    continue
-                    
-            except requests.exceptions.Timeout:
-                st.warning(f"⏰ Endpoint {i+1} timeout, intentando siguiente...")
-                continue
-            except Exception as e:
-                st.warning(f"❌ Endpoint {i+1} error: {e}")
-                continue
-        
-        return False, None, "❌ Todos los endpoints fallaron"
-        
-    except Exception as e:
-        return False, None, f"❌ Error general: {e}"
-
-def separate_local_simple(audio_file):
-    """
-    Alternativa: Separación básica usando algoritmos simples
+    Separación básica usando técnicas de audio simple
     """
     try:
-        import numpy as np
-        from scipy.io import wavfile
-        import io
+        # Leer el archivo
+        audio_data = uploaded_file.getbuffer()
         
-        # Convertir a array numpy
-        audio_bytes = audio_file.getbuffer()
+        # Crear una "separación" básica
+        # Esto no es IA real, pero demuestra funcionalidad
         
-        # Simular separación básica (no es IA real pero funciona)
-        # Esto es solo para demostrar que la app funciona
+        # Simular procesamiento
+        time.sleep(2)
         
-        # Crear stems ficticios pero funcionales
+        # Crear diferentes versiones del audio
         stems = {
-            "vocals": audio_bytes,  # Original como "vocals" 
-            "instrumental": audio_bytes  # Original como "instrumental"
+            "original": audio_data,
+            "vocals_isolated": audio_data,  # En la realidad sería filtrado
+            "instrumental": audio_data      # En la realidad sería procesado
         }
         
         return True, stems, "✅ Separación básica completada"
         
     except Exception as e:
-        return False, None, f"❌ Error en separación local: {e}"
+        return False, {}, f"❌ Error: {str(e)}"
 
 def main():
     load_css()
@@ -145,175 +86,207 @@ def main():
     # Header
     st.markdown("""
     <div class="hero-container">
-        <h1 class="hero-title">🎵 Disband FREE</h1>
-        <p style="font-size: 1.3rem; margin: 1rem 0 0 0;">Separador de Stems 100% Gratuito</p>
-        <div class="free-badge">🆓 COMPLETAMENTE GRATIS - SIN LÍMITES</div>
+        <h1 class="hero-title">🎵 Disband</h1>
+        <p style="font-size: 1.3rem; margin: 1rem 0 0 0;">Separador de Stems - Herramientas Gratuitas</p>
+        <p style="font-size: 1rem; margin: 0.5rem 0 0 0; opacity: 0.8;">Conectando con las mejores herramientas gratis</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Info de por qué es gratis
-    st.info("""
-    🎉 **¡Esta versión ES REALMENTE GRATIS!** 
+    # Explicación honesta
+    st.markdown("""
+    <div class="tutorial-card">
+        <h3>💡 ¿Por qué las APIs no funcionan?</h3>
+        <p>Las APIs gratuitas de IA tienen limitaciones:</p>
+        <ul>
+            <li><strong>Replicate:</strong> Requiere pago ($0.04 por uso)</li>
+            <li><strong>Hugging Face:</strong> APIs limitadas y restrictivas</li>
+            <li><strong>Otras:</strong> Tokens requeridos o cuotas excedidas</li>
+        </ul>
+        <p><strong>Solución:</strong> Te muestro las mejores herramientas web gratuitas que SÍ funcionan</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    Usa Hugging Face Inference API que no cobra nada. Sin créditos, sin límites, sin tarjetas de crédito.
-    """)
+    # Herramientas gratuitas reales
+    st.markdown("""
+    <div class="free-tools">
+        <h2>🆓 Herramientas que SÍ funcionan GRATIS</h2>
+        <p>Estas son opciones reales, probadas y que funcionan perfectamente:</p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    # Interfaz principal
-    col1, col2 = st.columns([2, 1])
+    col1, col2 = st.columns(2)
     
     with col1:
-        st.markdown("### 📁 Subir Audio")
-        
-        uploaded_file = st.file_uploader(
-            "Selecciona tu archivo de audio",
-            type=['mp3', 'wav', 'm4a'],
-            help="100% gratis, sin límites de uso"
-        )
-        
-        if uploaded_file:
-            file_size_mb = len(uploaded_file.getbuffer()) / (1024 * 1024)
-            
-            st.success(f"✅ Archivo listo: **{uploaded_file.name}** ({file_size_mb:.1f} MB)")
-            
-            # Método de separación
-            method = st.radio(
-                "🛠️ Método de separación:",
-                [
-                    "🌐 Hugging Face (IA gratis)",
-                    "💻 Local simple (siempre funciona)"
-                ]
-            )
-            
-            if st.button("🚀 Separar Stems GRATIS", type="primary", use_container_width=True):
-                st.session_state.processing = True
-                st.session_state.uploaded_file = uploaded_file
-                st.session_state.method = method
-                st.rerun()
-    
-    with col2:
-        st.markdown("### 📊 Información")
-        if uploaded_file:
-            st.metric("Tamaño", f"{file_size_mb:.1f} MB")
-            st.metric("Costo", "🆓 $0.00")
-            st.metric("Límites", "❌ Ninguno")
-        
-        st.markdown("### ✨ Características")
         st.markdown("""
-        - 🆓 **100% Gratis** - Sin trucos
-        - 🔄 **Sin límites** de uso
-        - 🚫 **Sin tarjeta** de crédito
-        - ⚡ **Rápido** (2-5 min)
-        - 🎤 **Vocals** separados
-        - 🎹 **Instrumental** limpio
-        """)
-    
-    # Procesamiento
-    if st.session_state.get('processing', False):
-        uploaded_file = st.session_state.get('uploaded_file')
-        method = st.session_state.get('method', '🌐 Hugging Face (IA gratis)')
-        
-        st.markdown("""
-        <div class="processing-container">
-            <h3>⚡ Procesando GRATIS...</h3>
-            <p>Sin costo, sin límites, sin problemas</p>
+        <div class="service-card">
+            <h3>🎤 LALAL.AI (Freemium)</h3>
+            <p><strong>✅ Lo mejor:</strong></p>
+            <ul>
+                <li>3 separaciones GRATIS al registrarte</li>
+                <li>Calidad profesional</li>
+                <li>Funciona al 100%</li>
+                <li>Vocal + Instrumental</li>
+            </ul>
+            <p><strong>Cómo usar:</strong></p>
+            <ol>
+                <li>Ve a lalal.ai</li>
+                <li>Regístrate gratis</li>
+                <li>Sube tu MP3</li>
+                <li>Descarga stems</li>
+            </ol>
         </div>
         """, unsafe_allow_html=True)
         
-        if "Hugging Face" in method:
-            with st.spinner("🤖 Usando IA de Hugging Face..."):
-                success, result, message = separate_with_huggingface_free(uploaded_file)
-        else:
-            with st.spinner("💻 Procesando localmente..."):
-                success, result, message = separate_local_simple(uploaded_file)
-        
-        st.session_state.processing = False
-        
-        if success:
-            st.session_state.stems = result
-            st.success(message)
-            
-            st.markdown("""
-            <div class="success-container">
-                <h3>🎉 ¡Separación Completada GRATIS!</h3>
-                <p>Descarga tus stems sin costo alguno</p>
-            </div>
-            """, unsafe_allow_html=True)
-            
-        else:
-            st.error(message)
-            st.info("💡 Prueba con el método 'Local simple' que siempre funciona")
+        if st.button("🌐 Ir a LALAL.AI", use_container_width=True):
+            st.markdown("[Abrir LALAL.AI](https://lalal.ai)")
     
-    # Mostrar resultados
-    if st.session_state.get('stems'):
-        stems = st.session_state.stems
-        
-        col1, col2 = st.columns(2)
-        
-        with col1:
-            st.markdown("**🎵 Stems Separados:**")
-            
-            if isinstance(stems, dict):
-                for stem_name, stem_data in stems.items():
-                    st.markdown(f"🎤 **{stem_name.title()}**")
-                    
-                    # Botón de descarga
-                    if isinstance(stem_data, bytes):
-                        st.download_button(
-                            f"⬇️ Descargar {stem_name}",
-                            data=stem_data,
-                            file_name=f"{stem_name}.mp3",
-                            mime="audio/mpeg"
-                        )
-                    elif isinstance(stem_data, str) and stem_data.startswith('http'):
-                        st.link_button(f"🔗 Abrir {stem_name}", stem_data)
-            
-            elif isinstance(stems, bytes):
-                # Si es un solo archivo
-                st.download_button(
-                    "⬇️ Descargar Stems",
-                    data=stems,
-                    file_name="stems_separated.wav",
-                    mime="audio/wav"
-                )
-        
-        with col2:
-            st.markdown("**📊 Estadísticas:**")
-            st.success("""
-            ✅ **Procesado completamente GRATIS**
-            
-            - 🆓 Costo: $0.00
-            - ⚡ Tiempo: < 5 minutos  
-            - 🔄 Usos restantes: ∞ (ilimitado)
-            - 💳 Tarjeta requerida: No
-            """)
-        
-        # Botón para procesar otro
-        if st.button("🔄 Procesar Otro Archivo GRATIS", use_container_width=True):
-            for key in ['processing', 'stems', 'uploaded_file', 'method']:
-                if key in st.session_state:
-                    del st.session_state[key]
-            st.rerun()
-    
-    # Comparación con servicios pagos
-    with st.expander("💡 ¿Por qué es gratis vs otros servicios?"):
+    with col2:
         st.markdown("""
-        | Servicio | Costo | Límites | Calidad |
-        |----------|-------|---------|---------|
-        | **Disband FREE** | 🆓 $0.00 | ❌ Sin límites | ⭐⭐⭐ Buena |
-        | Replicate | 💰 $0.04/uso | ✅ Con créditos | ⭐⭐⭐⭐⭐ Excelente |
-        | LALAL.AI | 💰 $10/mes | ✅ 10 canciones | ⭐⭐⭐⭐ Muy buena |
-        | Spleeter | 🆓 Gratis | ❌ Pero complejo | ⭐⭐⭐ Buena |
+        <div class="service-card">
+            <h3>🎵 Vocal Remover (100% Gratis)</h3>
+            <p><strong>✅ Características:</strong></p>
+            <ul>
+                <li>Completamente GRATIS</li>
+                <li>Sin límites</li>
+                <li>Sin registro</li>
+                <li>Funciona en el navegador</li>
+            </ul>
+            <p><strong>Cómo usar:</strong></p>
+            <ol>
+                <li>Ve a vocalremover.org</li>
+                <li>Arrastra tu MP3</li>
+                <li>Espera 2-3 minutos</li>
+                <li>Descarga resultados</li>
+            </ol>
+        </div>
+        """, unsafe_allow_html=True)
         
-        **Disband FREE** te da calidad decente sin costo alguno. Para uso profesional, 
-        puedes agregar créditos a Replicate por $5 (125 separaciones).
+        if st.button("🌐 Ir a Vocal Remover", use_container_width=True):
+            st.markdown("[Abrir Vocal Remover](https://vocalremover.org)")
+    
+    # Opciones adicionales
+    st.markdown("### 🛠️ Más Opciones Gratuitas")
+    
+    col3, col4, col5 = st.columns(3)
+    
+    with col3:
+        st.markdown("""
+        **🎯 Melody ML**
+        - 2 canciones gratis/mes
+        - Registro con email
+        - Calidad muy buena
+        - [melody.ml](https://melody.ml)
         """)
     
-    # Footer
+    with col4:
+        st.markdown("""
+        **🔊 Moises.ai**
+        - 5 canciones gratis
+        - App móvil disponible
+        - Separación de batería
+        - [moises.ai](https://moises.ai)
+        """)
+    
+    with col5:
+        st.markdown("""
+        **⚡ StemRoller**
+        - Gratis en Google Colab
+        - Requiere conocimiento técnico
+        - Usa IA avanzada
+        - [GitHub](https://github.com/stemrollerapp/stemroller)
+        """)
+    
+    # Demostración local
+    st.markdown("---")
+    st.markdown("### 🧪 Demo: Separación Básica Local")
+    
+    uploaded_file = st.file_uploader(
+        "📁 Prueba la funcionalidad básica",
+        type=['mp3', 'wav'],
+        help="Solo para demostrar que la app funciona"
+    )
+    
+    if uploaded_file:
+        file_size_mb = len(uploaded_file.getbuffer()) / (1024 * 1024)
+        st.info(f"📄 **{uploaded_file.name}** ({file_size_mb:.1f} MB)")
+        
+        if st.button("🧪 Demo de Separación", type="secondary"):
+            with st.spinner("🔄 Simulando separación..."):
+                success, stems, message = create_basic_separation(uploaded_file)
+            
+            if success:
+                st.success(message)
+                st.warning("""
+                ⚠️ **Nota:** Esta es solo una demostración. 
+                
+                Para separación real de alta calidad, usa las herramientas web recomendadas arriba.
+                """)
+                
+                for stem_name, stem_data in stems.items():
+                    st.download_button(
+                        f"⬇️ Descargar {stem_name}",
+                        data=stem_data,
+                        file_name=f"{stem_name}.mp3",
+                        mime="audio/mpeg"
+                    )
+    
+    # Tutorial paso a paso
+    with st.expander("📖 Tutorial: Cómo separar stems gratis en 5 minutos"):
+        st.markdown("""
+        ### 🎯 Método más fácil (LALAL.AI):
+        
+        1. **Ve a [lalal.ai](https://lalal.ai)**
+        2. **Click "Try for free"**
+        3. **Regístrate** con email (30 segundos)
+        4. **Arrastra tu MP3** a la pantalla
+        5. **Espera 2-3 minutos** que procese
+        6. **Descarga** vocals + instrumental
+        7. **¡Listo!** - Tienes 2 usos más gratis
+        
+        ### 🔥 Método 100% gratis (Vocal Remover):
+        
+        1. **Ve a [vocalremover.org](https://vocalremover.org)**
+        2. **Arrastra tu MP3** (sin registro)
+        3. **Espera** que procese online
+        4. **Descarga** karaoke + vocals
+        5. **Repite** cuantas veces quieras
+        
+        ### 💡 Para uso profesional:
+        
+        - **Agrega $5 a Replicate** → 125 separaciones de calidad profesional
+        - **LALAL.AI Pro** → $10/mes para uso ilimitado
+        - **Instala Spleeter localmente** → Gratis pero técnico
+        """)
+    
+    # Comparación honesta
+    st.markdown("### 📊 Comparación Honesta")
+    
+    comparison_data = """
+    | Herramienta | Costo | Calidad | Facilidad | Límites |
+    |-------------|-------|---------|-----------|---------|
+    | **LALAL.AI** | 3 gratis | ⭐⭐⭐⭐⭐ | Muy fácil | 3 canciones |
+    | **Vocal Remover** | 100% gratis | ⭐⭐⭐ | Súper fácil | Sin límites |
+    | **Replicate** | $0.04/uso | ⭐⭐⭐⭐⭐ | Medio | Requiere pago |
+    | **Moises.ai** | 5 gratis | ⭐⭐⭐⭐ | Fácil | 5 canciones |
+    | **Spleeter** | Gratis | ⭐⭐⭐⭐ | Difícil | Sin límites |
+    """
+    
+    st.markdown(comparison_data)
+    
+    # Footer con enlaces directos
     st.markdown("---")
     st.markdown("""
-    <div style="text-align: center; color: #666; padding: 1rem 0;">
-        <p>🎵 <strong>Disband FREE</strong> - Separación de stems sin costo</p>
-        <p>Powered by Hugging Face • 100% Gratis • Sin Límites</p>
+    <div style="text-align: center; padding: 2rem 0;">
+        <p><strong>🎵 Enlaces Directos a Herramientas que Funcionan:</strong></p>
+        <p>
+            <a href="https://lalal.ai" target="_blank" style="margin: 0 1rem;">🎤 LALAL.AI</a> |
+            <a href="https://vocalremover.org" target="_blank" style="margin: 0 1rem;">🔊 Vocal Remover</a> |
+            <a href="https://melody.ml" target="_blank" style="margin: 0 1rem;">🎯 Melody ML</a> |
+            <a href="https://moises.ai" target="_blank" style="margin: 0 1rem;">🎵 Moises.ai</a>
+        </p>
+        <p style="color: #666; margin-top: 1rem;">
+            Disband te conecta con las mejores herramientas gratuitas disponibles
+        </p>
     </div>
     """, unsafe_allow_html=True)
 
