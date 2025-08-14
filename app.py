@@ -68,51 +68,17 @@ def init_session():
     if 'stems' not in st.session_state:
         st.session_state.stems = {}
 
-def check_spleeter():
-    """Verificar si Spleeter está listo"""
+def check_separator():
+    """Verificar si audio-separator está listo"""
     try:
-        result = subprocess.run([sys.executable, "-c", "import spleeter"], 
+        result = subprocess.run([sys.executable, "-c", "from audio_separator import Separator"], 
                                capture_output=True, text=True)
         return result.returncode == 0
     except:
         return False
 
-def install_spleeter():
-    """Instalar Spleeter rápidamente"""
-    try:
-        st.info("📦 Instalando Spleeter (30 segundos)...")
-        
-        progress = st.progress(0)
-        
-        # Instalar spleeter
-        progress.progress(20)
-        result = subprocess.run([
-            sys.executable, "-m", "pip", "install", "spleeter==2.3.0", "--quiet"
-        ], capture_output=True, text=True, timeout=120)
-        
-        progress.progress(60)
-        
-        if result.returncode == 0:
-            # Instalar tensorflow
-            subprocess.run([
-                sys.executable, "-m", "pip", "install", "tensorflow==2.5.0", "--quiet"  
-            ], capture_output=True, text=True, timeout=120)
-            
-            progress.progress(100)
-            st.success("✅ ¡Spleeter instalado!")
-            time.sleep(1)
-            progress.empty()
-            return True
-        else:
-            st.error(f"Error: {result.stderr}")
-            return False
-            
-    except Exception as e:
-        st.error(f"Error instalando: {str(e)}")
-        return False
-
-def separate_with_spleeter(uploaded_file):
-    """Separar con Spleeter"""
+def separate_audio(uploaded_file):
+    """Separar con audio-separator"""
     
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -124,13 +90,15 @@ def separate_with_spleeter(uploaded_file):
         
         # Configurar salida
         output_dir = temp_path / "separated"
+        output_dir.mkdir()
         
-        # Comando spleeter
+        # Comando audio-separator
         cmd = [
-            sys.executable, "-m", "spleeter", "separate",
-            "-p", "spleeter:4stems-16kHz",
-            "-o", str(output_dir),
-            str(input_file)
+            sys.executable, "-m", "audio_separator",
+            str(input_file),
+            "--output_dir", str(output_dir),
+            "--model_name", "UVR_MDXNET_KARA_2",
+            "--output_format", "mp3"
         ]
         
         # Mostrar progreso
@@ -141,15 +109,15 @@ def separate_with_spleeter(uploaded_file):
         with status_container.container():
             st.markdown("""
             <div class="processing">
-                <h3>🚀 Separando con Spleeter</h3>
-                <p>Mucho más rápido que Demucs!</p>
+                <h3>🚀 Separando Audio</h3>
+                <p>Usando IA moderna y rápida</p>
             </div>
             """, unsafe_allow_html=True)
         
         progress_bar = progress_container.progress(0)
         
         try:
-            # Ejecutar spleeter
+            # Ejecutar separador
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
@@ -167,16 +135,21 @@ def separate_with_spleeter(uploaded_file):
                     logs.append(line)
                     
                     # Actualizar progreso
-                    if "separate" in line.lower() and current_progress < 50:
-                        current_progress = 50
+                    if "processing" in line.lower() and current_progress < 30:
+                        current_progress = 30
                         progress_bar.progress(current_progress)
                         with log_container:
-                            st.text("🎯 Separando instrumentos...")
-                    elif "done" in line.lower() or "finished" in line.lower():
+                            st.text("🎯 Iniciando separación...")
+                    elif "separating" in line.lower() and current_progress < 70:
+                        current_progress = 70
+                        progress_bar.progress(current_progress)
+                        with log_container:
+                            st.text("🎵 Separando instrumentos...")
+                    elif "saving" in line.lower() or "done" in line.lower():
                         current_progress = 90
                         progress_bar.progress(current_progress)
                         with log_container:
-                            st.text("💾 Finalizando...")
+                            st.text("💾 Guardando archivos...")
                     
                     # Mostrar logs
                     if len(logs) > 5:
@@ -194,18 +167,18 @@ def separate_with_spleeter(uploaded_file):
             log_container.empty()
             
             if process.returncode == 0:
-                # Buscar archivos
-                separated_folder = output_dir / input_file.stem
+                # Buscar archivos separados
+                stem_files = {}
                 
-                if separated_folder.exists():
-                    stem_files = {}
-                    for wav_file in separated_folder.glob("*.wav"):
-                        with open(wav_file, "rb") as f:
-                            stem_files[wav_file.name] = f.read()
-                    
+                # Buscar todos los archivos MP3 en el directorio de salida
+                for mp3_file in output_dir.rglob("*.mp3"):
+                    with open(mp3_file, "rb") as f:
+                        stem_files[mp3_file.name] = f.read()
+                
+                if stem_files:
                     return True, stem_files
                 else:
-                    st.error("❌ No se encontraron archivos")
+                    st.error("❌ No se encontraron archivos separados")
                     return False, {}
             else:
                 st.error("❌ Error en separación")
@@ -231,25 +204,25 @@ def main():
     st.markdown("""
     <div class="main-header">
         <h1>🎵 Disband</h1>
-        <h3>Separador Rápido de Stems</h3>
-        <p>Por @jeysshon - Versión Spleeter (súper rápida)</p>
+        <h3>Separador Moderno de Stems</h3>
+        <p>Por @jeysshon - IA de última generación</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Verificar Spleeter
-    if not check_spleeter():
-        st.warning("⚡ Instalando Spleeter (esto es rápido)...")
+    # Verificar separador
+    if not check_separator():
+        st.warning("⚡ Instalando separador de audio...")
+        st.info("Esto toma unos minutos la primera vez. Refresca la página en 2-3 minutos.")
         
-        if st.button("🚀 Instalar Spleeter"):
-            if install_spleeter():
-                st.rerun()
+        if st.button("🔄 Verificar"):
+            st.rerun()
         return
     
     # Mostrar que está listo
     st.markdown("""
     <div class="status-ok">
         <h4>✅ ¡Listo para separar!</h4>
-        <p>Spleeter instalado y funcionando</p>
+        <p>Separador de audio instalado y funcionando</p>
     </div>
     """, unsafe_allow_html=True)
     
@@ -269,7 +242,7 @@ def main():
             st.success(f"""
             **📄 {uploaded_file.name}**  
             📏 Tamaño: {file_size:.1f} MB  
-            ⚡ Tiempo estimado: 2-5 minutos
+            ⚡ Tiempo estimado: 3-8 minutos
             """)
             
             if not st.session_state.processing:
@@ -278,7 +251,7 @@ def main():
                     st.rerun()
             else:
                 # Procesar
-                success, stems = separate_with_spleeter(uploaded_file)
+                success, stems = separate_audio(uploaded_file)
                 
                 if success:
                     st.session_state.stems = stems
@@ -300,13 +273,20 @@ def main():
         # Mostrar stems
         stem_icons = {
             "vocals": "🎤",
+            "instrumental": "🎹",
             "drums": "🥁", 
             "bass": "🎸",
-            "other": "🎹"
+            "other": "🎵"
         }
         
         for stem_name in st.session_state.stems.keys():
-            stem_type = stem_name.split('.')[0]
+            # Detectar tipo de stem basado en el nombre del archivo
+            stem_type = "other"
+            for key in stem_icons.keys():
+                if key in stem_name.lower():
+                    stem_type = key
+                    break
+            
             icon = stem_icons.get(stem_type, "🎵")
             
             st.markdown(f"""
@@ -326,7 +306,7 @@ def main():
                     f"⬇️ {name}",
                     data=data,
                     file_name=name,
-                    mime="audio/wav"
+                    mime="audio/mpeg"
                 )
         
         with col2:
@@ -347,7 +327,7 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("**Disband** por @jeysshon • Powered by Spleeter")
+    st.markdown("**Disband** por @jeysshon • Separación moderna de audio")
 
 if __name__ == "__main__":
     main()
