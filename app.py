@@ -305,26 +305,19 @@ def show_dependency_error():
     """Show dependency installation instructions"""
     st.markdown("""
     <div class="warning-message">
-        <h3>⚡ Setting up Disband</h3>
-        <p>Dependencies are being installed by Streamlit Cloud...</p>
-        <p><strong>Please wait 3-5 minutes and refresh this page.</strong></p>
+        <h3>⚡ Configurando Disband</h3>
+        <p>Las dependencias se están instalando...</p>
+        <p><strong>Por favor espera 3-5 minutos y recarga esta página.</strong></p>
     </div>
     """, unsafe_allow_html=True)
     
-    st.info("""
-    **What's happening:**
-    1. Streamlit Cloud is installing PyTorch and Demucs
-    2. This only happens once on first deployment
-    3. Future visits will be instant
-    """)
-    
-    if st.button("🔄 Check Again", use_container_width=True):
+    if st.button("🔄 Verificar de Nuevo", use_container_width=True):
         st.rerun()
         
     st.markdown("---")
-    st.markdown("⏱️ **Expected wait time:** 3-5 minutes")
-    st.markdown("🔄 **Then:** Refresh this page")
-    st.markdown("✅ **Result:** Beautiful stem separation!")
+    st.markdown("⏱️ **Tiempo estimado:** 3-5 minutos")
+    st.markdown("🔄 **Después:** Recarga esta página")
+    st.markdown("✅ **Resultado:** ¡Separación de stems hermosa!")
 
 def get_model_info():
     """Get information about available models"""
@@ -531,14 +524,14 @@ def main():
         # Upload section
         st.markdown("""
         <div class="upload-container">
-            <h2 style="margin-top: 0; color: #333; font-weight: 600;">📁 Upload Your Audio</h2>
+            <h2 style="margin-top: 0; color: #333; font-weight: 600;">📁 Sube Tu Audio</h2>
         </div>
         """, unsafe_allow_html=True)
         
         uploaded_file = st.file_uploader(
-            label="Choose your audio file",
+            label="Elige tu archivo de audio",
             type=['mp3', 'wav', 'flac', 'm4a', 'aac'],
-            help="Drag and drop or click to browse",
+            help="Arrastra y suelta o haz click para buscar",
             label_visibility="collapsed"
         )
         
@@ -553,11 +546,11 @@ def main():
             """, unsafe_allow_html=True)
             
             # Model selection
-            st.markdown("### 🤖 Choose AI Model")
+            st.markdown("### 🤖 Elige Modelo de IA")
             
             models = get_model_info()
             selected_model = st.radio(
-                "Select model",
+                "Selecciona modelo",
                 options=list(models.keys()),
                 index=1,  # htdemucs default
                 format_func=lambda x: f"{models[x]['icon']} {models[x]['name']} - {models[x]['time']}",
@@ -569,25 +562,25 @@ def main():
             
             with col_format:
                 output_format = st.selectbox(
-                    "💾 Output Format",
+                    "💾 Formato de Salida",
                     ["MP3", "WAV", "FLAC"],
-                    help="MP3: Smaller files, WAV: Best quality, FLAC: Compressed lossless"
+                    help="MP3: Archivos más pequeños, WAV: Mejor calidad, FLAC: Sin pérdida comprimido"
                 )
             
             with col_process:
                 st.markdown("<br>", unsafe_allow_html=True)  # Spacing
                 if not deps_ok:
-                    st.button("🔄 Dependencies Installing...", disabled=True, use_container_width=True)
+                    st.button("🔄 Instalando Dependencias...", disabled=True, use_container_width=True)
                 elif not st.session_state.processing and not st.session_state.stems_ready:
-                    if st.button("🎯 Separate Stems", use_container_width=True):
+                    if st.button("🎯 Separar Stems", use_container_width=True):
                         st.session_state.processing = True
                         st.session_state.stems_ready = False
                         st.session_state.stem_files = {}
                         st.rerun()
                 elif st.session_state.processing:
-                    st.button("🔄 Processing...", disabled=True, use_container_width=True)
+                    st.button("🔄 Procesando...", disabled=True, use_container_width=True)
                 else:
-                    if st.button("🔄 Process New File", use_container_width=True):
+                    if st.button("🔄 Procesar Nuevo Archivo", use_container_width=True):
                         st.session_state.processing = False
                         st.session_state.stems_ready = False
                         st.session_state.stem_files = {}
@@ -595,30 +588,30 @@ def main():
     
     with col2:
         # Sidebar info
-        st.markdown("### 📊 Quick Stats")
+        st.markdown("### 📊 Estadísticas Rápidas")
         
         if uploaded_file:
             model_info = models[selected_model]
-            st.metric("Estimated Time", model_info['time'])
-            st.metric("Quality Level", model_info['quality'])
-            st.metric("File Size", f"{file_size_mb:.1f} MB")
+            st.metric("Tiempo Estimado", model_info['time'])
+            st.metric("Nivel de Calidad", model_info['quality'])
+            st.metric("Tamaño de Archivo", f"{file_size_mb:.1f} MB")
         else:
-            st.info("👆 Upload a file to see stats")
+            st.info("👆 Sube un archivo para ver estadísticas")
         
         # Tips section
-        st.markdown("### 💡 Pro Tips")
+        st.markdown("### 💡 Consejos Pro")
         st.markdown("""
         <div class="feature-card">
-            <strong>🏆 Best Quality:</strong><br>
-            Use htdemucs_ft for professional results
+            <strong>🏆 Mejor Calidad:</strong><br>
+            Usa htdemucs_ft para resultados profesionales
         </div>
         <div class="feature-card">
-            <strong>⚡ Quick Test:</strong><br>
-            Use mdx_extra for fast previews
+            <strong>⚡ Prueba Rápida:</strong><br>
+            Usa mdx_extra para previsualizaciones rápidas
         </div>
         <div class="feature-card">
-            <strong>🎼 Six Stems:</strong><br>
-            Use htdemucs_6s for complex songs
+            <strong>🎼 Seis Stems:</strong><br>
+            Usa htdemucs_6s para canciones complejas
         </div>
         """, unsafe_allow_html=True)
     
