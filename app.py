@@ -88,41 +88,57 @@ def file_to_base64(uploaded_file):
     return base64.b64encode(uploaded_file.getbuffer()).decode()
 
 # Función para usar Replicate API (GRATUITA)
-def separate_with_replicate_api(audio_data, model="mdx_extra"):
+def separate_with_replicate_api(uploaded_file, model="mdx_extra"):
     """
     Usa la API gratuita de Replicate para separar stems
-    No requiere instalación local de dependencias
     """
     try:
-        # Endpoint de Replicate para Demucs
+        # Configuración correcta para Demucs en Replicate
         url = "https://api.replicate.com/v1/predictions"
         
-        # Headers
         headers = {
-            "Authorization": "Token " + st.secrets.get("REPLICATE_API_TOKEN", ""),
+            "Authorization": f"Token {st.secrets.get('REPLICATE_API_TOKEN', '')}",
             "Content-Type": "application/json"
         }
         
-        # Datos para la API
+        # Convertir archivo a base64 correctamente
+        audio_bytes = uploaded_file.getbuffer()
+        audio_b64 = base64.b64encode(audio_bytes).decode('utf-8')
+        
+        # Detectar tipo de archivo
+        file_type = uploaded_file.type
+        if file_type == "audio/mpeg":
+            mime_type = "audio/mp3"
+        elif file_type == "audio/wav":
+            mime_type = "audio/wav"
+        else:
+            mime_type = "audio/mp3"  # Default
+        
+        # Usar modelo correcto de Demucs disponible
         data = {
-            "version": "ef36b9d9c5c08cc6c81b866b7db94afe81b14cf40ab3a33d8b3c3b1d5cd5f2ee",  # Demucs model
+            "version": "07c6b006d47c0188bb1c8288a81fa2f1b0e82f1d8a1b1cdf05c0aef55a1da2b4",  # Meta Demucs v4
             "input": {
-                "audio": f"data:audio/mp3;base64,{audio_data}",
-                "model": model
+                "audio": f"data:{mime_type};base64,{audio_b64}"
             }
         }
         
-        # Enviar petición
+        # Debugging: mostrar request info
+        st.write(f"🔍 Sending to Replicate - File: {uploaded_file.name}, Size: {len(audio_bytes)} bytes")
+        
         response = requests.post(url, json=data, headers=headers)
         
         if response.status_code == 201:
-            prediction_url = response.json()["urls"]["get"]
-            return True, prediction_url
+            result = response.json()
+            return True, result["urls"]["get"]
         else:
-            return False, f"Error API: {response.status_code}"
+            # Mostrar error detallado
+            error_detail = response.text
+            st.error(f"API Response: {response.status_code} - {error_detail}")
+            return False, f"HTTP {response.status_code}: {error_detail}"
             
     except Exception as e:
-        return False, f"Error: {str(e)}"
+        st.error(f"Exception details: {str(e)}")
+        return False, f"Exception: {str(e)}"
 
 # Función alternativa usando Hugging Face (TAMBIÉN GRATUITA)
 def separate_with_huggingface(audio_data):
@@ -312,14 +328,10 @@ def main():
         </div>
         """, unsafe_allow_html=True)
         
-        # Convert to base64
-        with st.spinner("Preparing audio..."):
-            audio_b64 = file_to_base64(uploaded_file)
-        
-        # Start separation
+        # Convert file directly and start separation
         if replicate_token:
             st.info("🔄 Using Replicate API...")
-            success, result = separate_with_replicate_api(audio_b64, model)
+            success, result = separate_with_replicate_api(uploaded_file, model)
             
             if success:
                 prediction_url = result
@@ -353,6 +365,8 @@ def main():
         
         elif hf_token:
             st.info("🔄 Using Hugging Face API...")
+            # Para HF, aún necesitamos base64
+            audio_b64 = file_to_base64(uploaded_file)
             success, result = separate_with_huggingface(audio_b64)
             
             if success:
