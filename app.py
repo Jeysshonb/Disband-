@@ -294,30 +294,51 @@ def load_css():
     """, unsafe_allow_html=True)
 
 def check_dependencies():
-    """Check if required packages are installed"""
+    """Simple check - if demucs works, we're good"""
     try:
         import demucs
-        return True, "✅ Ready to separate stems!"
+        return True, "✅ Listo para separar!"
     except ImportError:
-        return False, "Dependencies still installing..."
+        return False, "⏳ Instalando IA..."
 
-def show_dependency_error():
-    """Show dependency installation instructions"""
-    st.markdown("""
-    <div class="warning-message">
-        <h3>⚡ Configurando Disband</h3>
-        <p>Las dependencias se están instalando...</p>
-        <p><strong>Por favor espera 3-5 minutos y recarga esta página.</strong></p>
-    </div>
-    """, unsafe_allow_html=True)
-    
-    if st.button("🔄 Verificar de Nuevo", use_container_width=True):
-        st.rerun()
+def separate_audio_safe(uploaded_file, model, output_format):
+    """Safe audio separation with error handling"""
+    try:
+        # Try to import demucs here
+        import demucs
+        import subprocess
+        import sys
+        import tempfile
+        from pathlib import Path
         
-    st.markdown("---")
-    st.markdown("⏱️ **Tiempo estimado:** 3-5 minutos")
-    st.markdown("🔄 **Después:** Recarga esta página")
-    st.markdown("✅ **Resultado:** ¡Separación de stems hermosa!")
+        # If we get here, demucs is available
+        return separate_audio(uploaded_file, model, output_format)
+        
+    except ImportError:
+        # Demucs not available, try to install
+        st.error("""
+        🔧 **Instalando dependencias ahora...**
+        
+        La IA se está descargando. Esto puede tomar 2-3 minutos.
+        La página se recargará automáticamente cuando esté lista.
+        """)
+        
+        try:
+            with st.spinner("Instalando Demucs..."):
+                subprocess.run([
+                    sys.executable, "-m", "pip", "install", "demucs", "--quiet"
+                ], check=True, timeout=180)
+            
+            st.success("✅ ¡Instalación completa! Recargando...")
+            time.sleep(2)
+            st.rerun()
+            
+        except Exception as e:
+            st.error(f"❌ Error en instalación: {str(e)}")
+            return False, {}, "Error de instalación"
+    
+    except Exception as e:
+        return False, {}, f"❌ Error: {str(e)}"
 
 def get_model_info():
     """Get information about available models"""
@@ -509,15 +530,13 @@ def main():
     </div>
     """, unsafe_allow_html=True)
     
-    # Check dependencies
+    # Check dependencies but always show interface
     deps_ok, deps_msg = check_dependencies()
     
     if not deps_ok:
-        show_dependency_error()
-        # Don't return - show the interface anyway for testing
-        st.warning("⚠️ Some features may not work until dependencies are installed")
+        st.info(f"🔧 {deps_msg} La interfaz está disponible pero el procesamiento se activará cuando termine la instalación.")
     
-    # Main interface (always show)
+    # Always show main interface
     col1, col2 = st.columns([2, 1])
     
     with col1:
@@ -562,16 +581,15 @@ def main():
             col_process_single = st.columns(1)[0]
             with col_process_single:
                 st.markdown("<br>", unsafe_allow_html=True)  # Spacing
-                if not deps_ok:
-                    st.button("🔄 Instalando Dependencias...", disabled=True, use_container_width=True)
-                elif not st.session_state.processing and not st.session_state.stems_ready:
-                    if st.button("🚀 Procesar con Máxima Calidad", use_container_width=True, type="primary"):
+                if not st.session_state.processing and not st.session_state.stems_ready:
+                    button_text = "🚀 Procesar con Máxima Calidad" if deps_ok else "🔧 Instalar e Procesar"
+                    if st.button(button_text, use_container_width=True, type="primary"):
                         st.session_state.processing = True
                         st.session_state.stems_ready = False
                         st.session_state.stem_files = {}
                         st.rerun()
                 elif st.session_state.processing:
-                    st.button("🎵 Separando Stems...", disabled=True, use_container_width=True)
+                    st.button("🎵 Procesando...", disabled=True, use_container_width=True)
                 else:
                     if st.button("🔄 Procesar Otra Canción", use_container_width=True):
                         st.session_state.processing = False
@@ -611,9 +629,9 @@ def main():
         </div>
         """, unsafe_allow_html=True)
     
-    # Processing section
+    # Processing section - always allow processing
     if st.session_state.processing and uploaded_file:
-        success, stem_files, message = separate_audio(uploaded_file, selected_model, output_format)
+        success, stem_files, message = separate_audio_safe(uploaded_file, selected_model, output_format)
         
         if success:
             st.session_state.stem_files = stem_files
