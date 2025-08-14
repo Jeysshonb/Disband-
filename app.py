@@ -545,42 +545,35 @@ def main():
             </div>
             """, unsafe_allow_html=True)
             
-            # Model selection
-            st.markdown("### 🤖 Elige Modelo de IA")
+            # Auto-select best model and format
+            selected_model = "htdemucs_ft"  # Always use the best
+            output_format = "WAV"  # Always use best quality
             
-            models = get_model_info()
-            selected_model = st.radio(
-                "Selecciona modelo",
-                options=list(models.keys()),
-                index=1,  # htdemucs default
-                format_func=lambda x: f"{models[x]['icon']} {models[x]['name']} - {models[x]['time']}",
-                label_visibility="collapsed"
-            )
+            # Show what will be used
+            st.markdown("### ⚡ Configuración Automática")
+            st.success(f"""
+            **🏆 Modelo:** Máxima Calidad (htdemucs_ft)  
+            **💎 Formato:** WAV (Sin pérdida)  
+            **⏱️ Tiempo:** ~15-30 minutos  
+            **🎯 Resultado:** Calidad profesional
+            """)
             
-            # Format selection
-            col_format, col_process = st.columns([1, 1])
-            
-            with col_format:
-                output_format = st.selectbox(
-                    "💾 Formato de Salida",
-                    ["MP3", "WAV", "FLAC"],
-                    help="MP3: Archivos más pequeños, WAV: Mejor calidad, FLAC: Sin pérdida comprimido"
-                )
-            
-            with col_process:
+            # Process button
+            col_process_single = st.columns(1)[0]
+            with col_process_single:
                 st.markdown("<br>", unsafe_allow_html=True)  # Spacing
                 if not deps_ok:
                     st.button("🔄 Instalando Dependencias...", disabled=True, use_container_width=True)
                 elif not st.session_state.processing and not st.session_state.stems_ready:
-                    if st.button("🎯 Separar Stems", use_container_width=True):
+                    if st.button("🚀 Procesar con Máxima Calidad", use_container_width=True, type="primary"):
                         st.session_state.processing = True
                         st.session_state.stems_ready = False
                         st.session_state.stem_files = {}
                         st.rerun()
                 elif st.session_state.processing:
-                    st.button("🔄 Procesando...", disabled=True, use_container_width=True)
+                    st.button("🎵 Separando Stems...", disabled=True, use_container_width=True)
                 else:
-                    if st.button("🔄 Procesar Nuevo Archivo", use_container_width=True):
+                    if st.button("🔄 Procesar Otra Canción", use_container_width=True):
                         st.session_state.processing = False
                         st.session_state.stems_ready = False
                         st.session_state.stem_files = {}
@@ -588,30 +581,33 @@ def main():
     
     with col2:
         # Sidebar info
-        st.markdown("### 📊 Estadísticas Rápidas")
+        st.markdown("### 📊 Estadísticas")
         
         if uploaded_file:
-            model_info = models[selected_model]
-            st.metric("Tiempo Estimado", model_info['time'])
-            st.metric("Nivel de Calidad", model_info['quality'])
-            st.metric("Tamaño de Archivo", f"{file_size_mb:.1f} MB")
+            st.metric("⏱️ Tiempo", "15-30 min")
+            st.metric("🏆 Calidad", "⭐⭐⭐⭐⭐")
+            st.metric("📏 Tamaño", f"{file_size_mb:.1f} MB")
         else:
-            st.info("👆 Sube un archivo para ver estadísticas")
+            st.info("👆 Sube un archivo para procesar")
         
         # Tips section
-        st.markdown("### 💡 Consejos Pro")
+        st.markdown("### 🎯 Qué Obtienes")
         st.markdown("""
         <div class="feature-card">
-            <strong>🏆 Mejor Calidad:</strong><br>
-            Usa htdemucs_ft para resultados profesionales
+            <strong>🥁 Drums:</strong><br>
+            Batería aislada perfecta
         </div>
         <div class="feature-card">
-            <strong>⚡ Prueba Rápida:</strong><br>
-            Usa mdx_extra para previsualizaciones rápidas
+            <strong>🎸 Bass:</strong><br>
+            Bajo limpio y definido
         </div>
         <div class="feature-card">
-            <strong>🎼 Seis Stems:</strong><br>
-            Usa htdemucs_6s para canciones complejas
+            <strong>🎤 Vocals:</strong><br>
+            Voces sin instrumentos
+        </div>
+        <div class="feature-card">
+            <strong>🎹 Other:</strong><br>
+            Instrumentos y guitarras
         </div>
         """, unsafe_allow_html=True)
     
