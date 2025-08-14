@@ -1,235 +1,418 @@
-import streamlit as st
-import subprocess
-import sys
-import os
-import tempfile
-import zipfile
-from pathlib import Path
-from io import BytesIO
+#!/usr/bin/env python3
+"""
+🎵 DISBAND - Separador de Stems usando API
+Funciona en Streamlit Cloud sin instalar dependencias pesadas
+"""
 
+import streamlit as st
+import requests
+import time
+import zipfile
+from io import BytesIO
+import base64
+
+# Configuración de página
 st.set_page_config(
-    page_title="🎵 Disband Simple",
+    page_title="🎵 Disband - AI Stem Separator",
     page_icon="🎵",
-    layout="centered"
+    layout="wide",
+    initial_sidebar_state="collapsed"
 )
 
-# CSS simple
-st.markdown("""
-<style>
-.main-header {
-    background: linear-gradient(90deg, #667eea, #764ba2);
-    padding: 2rem; border-radius: 12px; color: white;
-    text-align: center; margin-bottom: 2rem;
-}
-</style>
-""", unsafe_allow_html=True)
+# CSS simplificado pero bonito
+def load_css():
+    st.markdown("""
+    <style>
+    .stApp {
+        font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+    
+    #MainMenu, footer, header { visibility: hidden; }
+    
+    .hero-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 3rem 2rem;
+        border-radius: 20px;
+        text-align: center;
+        margin-bottom: 2rem;
+        color: white;
+    }
+    
+    .hero-title {
+        font-size: 3.5rem;
+        font-weight: 700;
+        margin: 0;
+        text-shadow: 0 2px 10px rgba(0,0,0,0.3);
+    }
+    
+    .upload-container {
+        background: white;
+        padding: 2rem;
+        border-radius: 16px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        border: 1px solid #f0f2f6;
+        margin-bottom: 2rem;
+    }
+    
+    .results-container {
+        background: linear-gradient(135deg, #00c851 0%, #00a085 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        margin: 2rem 0;
+    }
+    
+    .processing-container {
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        text-align: center;
+        margin: 2rem 0;
+    }
+    
+    .warning-container {
+        background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+        padding: 2rem;
+        border-radius: 16px;
+        color: white;
+        text-align: center;
+        margin: 2rem 0;
+    }
+    </style>
+    """, unsafe_allow_html=True)
 
-def install_if_missing():
-    """Instalar solo lo que falta, versión por versión"""
-    
-    # Verificar qué falta
-    missing = []
-    
+# Función para convertir archivo a base64
+def file_to_base64(uploaded_file):
+    """Convierte archivo subido a base64 para enviar a API"""
+    return base64.b64encode(uploaded_file.getbuffer()).decode()
+
+# Función para usar Replicate API (GRATUITA)
+def separate_with_replicate_api(audio_data, model="mdx_extra"):
+    """
+    Usa la API gratuita de Replicate para separar stems
+    No requiere instalación local de dependencias
+    """
     try:
-        import torch
-        st.success(f"✅ PyTorch {torch.__version__}")
-    except ImportError:
-        missing.append("torch")
-    
+        # Endpoint de Replicate para Demucs
+        url = "https://api.replicate.com/v1/predictions"
+        
+        # Headers
+        headers = {
+            "Authorization": "Token " + st.secrets.get("REPLICATE_API_TOKEN", ""),
+            "Content-Type": "application/json"
+        }
+        
+        # Datos para la API
+        data = {
+            "version": "ef36b9d9c5c08cc6c81b866b7db94afe81b14cf40ab3a33d8b3c3b1d5cd5f2ee",  # Demucs model
+            "input": {
+                "audio": f"data:audio/mp3;base64,{audio_data}",
+                "model": model
+            }
+        }
+        
+        # Enviar petición
+        response = requests.post(url, json=data, headers=headers)
+        
+        if response.status_code == 201:
+            prediction_url = response.json()["urls"]["get"]
+            return True, prediction_url
+        else:
+            return False, f"Error API: {response.status_code}"
+            
+    except Exception as e:
+        return False, f"Error: {str(e)}"
+
+# Función alternativa usando Hugging Face (TAMBIÉN GRATUITA)
+def separate_with_huggingface(audio_data):
+    """
+    Alternativa usando Hugging Face Inference API
+    También gratuita pero con límites de uso
+    """
     try:
-        import demucs
-        st.success(f"✅ Demucs disponible")
-    except ImportError:
-        missing.append("demucs")
-    
-    if not missing:
-        return True, "✅ Todo instalado"
-    
-    st.info(f"Instalando: {', '.join(missing)}")
-    
-    # Instalar uno por uno con configuración específica
-    for package in missing:
-        try:
-            if package == "torch":
-                # PyTorch versión compatible con Python 3.13
-                cmd = [sys.executable, "-m", "pip", "install", 
-                      "torch>=2.5.0", "torchaudio>=2.5.0", 
-                      "--index-url", "https://download.pytorch.org/whl/cpu",
-                      "--no-cache-dir"]
-            elif package == "demucs":
-                cmd = [sys.executable, "-m", "pip", "install", 
-                      "demucs", "--no-cache-dir"]
+        API_URL = "https://api-inference.huggingface.co/models/facebook/demucs-waveform-hdemucs"
+        headers = {"Authorization": f"Bearer {st.secrets.get('HF_API_TOKEN', '')}"}
+        
+        # Decodificar base64 para enviar como bytes
+        audio_bytes = base64.b64decode(audio_data)
+        
+        response = requests.post(API_URL, headers=headers, data=audio_bytes)
+        
+        if response.status_code == 200:
+            return True, response.content
+        else:
+            return False, f"Error HF: {response.status_code}"
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except Exception as e:
+        return False, f"Error: {str(e)}"
+
+# Función para chequear estado de predicción
+def check_prediction_status(prediction_url):
+    """Chequea el estado de la predicción en Replicate"""
+    try:
+        headers = {
+            "Authorization": "Token " + st.secrets.get("REPLICATE_API_TOKEN", "")
+        }
+        
+        response = requests.get(prediction_url, headers=headers)
+        
+        if response.status_code == 200:
+            result = response.json()
+            status = result.get("status")
             
-            if result.returncode != 0:
-                st.error(f"Error instalando {package}: {result.stderr}")
-                return False, f"Error en {package}"
+            if status == "succeeded":
+                return "completed", result.get("output", {})
+            elif status == "failed":
+                return "failed", result.get("error", "Unknown error")
             else:
-                st.success(f"✅ {package} instalado")
-                
-        except Exception as e:
-            st.error(f"Excepción instalando {package}: {e}")
-            return False, f"Excepción en {package}"
+                return "processing", None
+        else:
+            return "error", f"HTTP {response.status_code}"
+            
+    except Exception as e:
+        return "error", str(e)
+
+# Función para crear ZIP de descarga
+def create_download_zip(stems_dict):
+    """Crear ZIP con los stems para descarga"""
+    zip_buffer = BytesIO()
     
-    return True, "✅ Instalación completada"
-
-def check_everything():
-    """Verificar que todo esté funcionando"""
-    try:
-        import demucs
-        import torch
-        import torchaudio
-        
-        # Verificar que demucs funcione
-        from demucs.pretrained import get_model_from_args
-        
-        return True, "✅ Demucs funcionando correctamente"
-    except Exception as e:
-        return False, f"❌ Error: {e}"
-
-def separate_audio(uploaded_file):
-    """Separar audio con configuración mínima"""
-    try:
-        with tempfile.TemporaryDirectory() as temp_dir:
-            temp_path = Path(temp_dir)
-            
-            # Guardar archivo
-            input_file = temp_path / uploaded_file.name
-            with open(input_file, "wb") as f:
-                f.write(uploaded_file.getbuffer())
-            
-            output_dir = temp_path / "output"
-            
-            # Comando más simple posible
-            cmd = [
-                sys.executable, "-c", f"""
-import sys
-sys.path.insert(0, '/home/adminuser/venv/lib/python3.13/site-packages')
-from demucs.separate import main
-main([
-    '--model', 'mdx_extra',
-    '--out', '{output_dir}',
-    '--mp3',
-    '--device', 'cpu',
-    '{input_file}'
-])
-"""
-            ]
-            
-            process = subprocess.run(cmd, capture_output=True, text=True, timeout=1200)
-            
-            if process.returncode == 0:
-                # Buscar archivos
-                for model_dir in output_dir.rglob("*"):
-                    if model_dir.is_dir() and model_dir.name == input_file.stem:
-                        files = {}
-                        for mp3_file in model_dir.glob("*.mp3"):
-                            with open(mp3_file, "rb") as f:
-                                files[mp3_file.name] = f.read()
-                        
-                        if files:
-                            return True, files
-                
-            return False, f"Error: {process.stderr}"
-                
-    except Exception as e:
-        return False, f"Excepción: {e}"
+    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zip_file:
+        for stem_name, stem_url in stems_dict.items():
+            # Descargar cada stem
+            stem_response = requests.get(stem_url)
+            if stem_response.status_code == 200:
+                zip_file.writestr(f"{stem_name}.mp3", stem_response.content)
+    
+    zip_buffer.seek(0)
+    return zip_buffer.getvalue()
 
 def main():
-    # Header
+    load_css()
+    
+    # Hero Section
     st.markdown("""
-    <div class="main-header">
-        <h1>🎵 Disband Simple</h1>
-        <p>Versión que funciona sin requirements.txt</p>
+    <div class="hero-container">
+        <h1 class="hero-title">🎵 Disband</h1>
+        <p style="font-size: 1.3rem; margin: 1rem 0 0 0;">AI-Powered Stem Separator</p>
+        <p style="font-size: 1rem; margin: 0.5rem 0 0 0; opacity: 0.8;">Powered by Replicate API</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Mostrar info del sistema
-    st.info(f"Python: {sys.version.split()[0]} | Streamlit: {st.__version__}")
+    # Verificar configuración de API
+    replicate_token = st.secrets.get("REPLICATE_API_TOKEN", "")
+    hf_token = st.secrets.get("HF_API_TOKEN", "")
     
-    # Verificar estado
-    is_ready, message = check_everything()
-    
-    if not is_ready:
-        st.warning(message)
+    if not replicate_token and not hf_token:
+        st.markdown("""
+        <div class="warning-container">
+            <h3>⚠️ Configuración Requerida</h3>
+            <p>Para usar esta app, necesitas configurar una API key gratuita.</p>
+            <p><strong>Opciones:</strong></p>
+            <ul style="text-align: left; max-width: 600px; margin: 0 auto;">
+                <li><a href="https://replicate.com" target="_blank" style="color: white;">Replicate.com</a> - Gratis hasta 1000 predicciones/mes</li>
+                <li><a href="https://huggingface.co" target="_blank" style="color: white;">Hugging Face</a> - Gratis con límites por hora</li>
+            </ul>
+        </div>
+        """, unsafe_allow_html=True)
         
-        if st.button("🔧 Instalar Dependencias Manualmente"):
-            with st.spinner("Instalando..."):
-                success, install_msg = install_if_missing()
+        with st.expander("📋 Instrucciones de Configuración"):
+            st.markdown("""
+            ### Opción 1: Replicate (Recomendado)
+            1. Ve a [replicate.com](https://replicate.com) y crea cuenta gratis
+            2. Ve a Account → API Tokens
+            3. Copia tu token
+            4. En Streamlit Cloud: Settings → Secrets
+            5. Agrega: `REPLICATE_API_TOKEN = "tu_token_aqui"`
             
-            if success:
-                st.success(install_msg)
-                st.rerun()
-            else:
-                st.error(install_msg)
-                
-                # Mostrar información de debug
-                st.markdown("### 🔍 Debug Info")
-                st.code(f"""
-Sistema: {os.name}
-Python: {sys.version}
-Executable: {sys.executable}
-Path: {sys.path[0]}
-                """)
-        
+            ### Opción 2: Hugging Face
+            1. Ve a [huggingface.co](https://huggingface.co) y crea cuenta
+            2. Ve a Settings → Access Tokens  
+            3. Crea token con permisos de lectura
+            4. En Streamlit Cloud: Settings → Secrets
+            5. Agrega: `HF_API_TOKEN = "tu_token_aqui"`
+            
+            ### ¿Dónde están los Secrets en Streamlit?
+            1. Ve a share.streamlit.io
+            2. Click en tu app → "⚙️" → "Secrets"
+            3. Agrega el token como se muestra arriba
+            """)
         return
     
-    # Si todo está bien
-    st.success(message)
-    
     # Interfaz principal
-    uploaded_file = st.file_uploader(
-        "📁 Sube tu archivo MP3",
-        type=['mp3'],
-        help="Solo MP3 por ahora para simplificar"
-    )
+    col1, col2 = st.columns([2, 1])
     
-    if uploaded_file:
-        size_mb = len(uploaded_file.getbuffer()) / (1024 * 1024)
-        st.info(f"📄 {uploaded_file.name} ({size_mb:.1f} MB)")
+    with col1:
+        st.markdown("""
+        <div class="upload-container">
+            <h2 style="margin-top: 0; color: #333;">📁 Upload Your Audio</h2>
+        </div>
+        """, unsafe_allow_html=True)
         
-        if st.button("🚀 Separar (Modelo Rápido)", type="primary"):
-            st.warning("⏳ Procesando... Esto toma 3-5 minutos")
+        uploaded_file = st.file_uploader(
+            "Choose your audio file",
+            type=['mp3', 'wav', 'm4a'],
+            help="Supported: MP3, WAV, M4A (max 25MB for free APIs)",
+            label_visibility="collapsed"
+        )
+        
+        if uploaded_file:
+            file_size_mb = len(uploaded_file.getbuffer()) / (1024 * 1024)
             
-            with st.spinner("Separando stems..."):
-                success, result = separate_audio(uploaded_file)
+            if file_size_mb > 25:
+                st.error("⚠️ File too large! Free APIs support max 25MB. Try compressing your audio.")
+                return
+            
+            st.info(f"📄 **{uploaded_file.name}** ({file_size_mb:.1f} MB)")
+            
+            # Model selection
+            model = st.selectbox(
+                "🤖 AI Model",
+                ["mdx_extra", "hdemucs_mmi", "htdemucs"],
+                format_func=lambda x: {
+                    "mdx_extra": "🚀 Ultra Fast (2-3 min)",
+                    "hdemucs_mmi": "⚡ Fast (3-5 min)", 
+                    "htdemucs": "🎯 High Quality (5-8 min)"
+                }[x]
+            )
+            
+            # Process button
+            if st.button("🚀 Separate Stems", type="primary", use_container_width=True):
+                st.session_state.processing = True
+                st.session_state.uploaded_file = uploaded_file
+                st.session_state.model = model
+                st.rerun()
+    
+    with col2:
+        st.markdown("### 📊 Quick Info")
+        if uploaded_file:
+            st.metric("File Size", f"{file_size_mb:.1f} MB")
+            st.metric("Processing", "~3-8 min")
+            st.metric("API", "Replicate/HF")
+        
+        st.markdown("### 💡 Features")
+        st.markdown("""
+        - ✅ No installation required
+        - ✅ Runs in the cloud  
+        - ✅ Professional quality
+        - ✅ Multiple formats
+        - ✅ Free API usage
+        """)
+    
+    # Processing section
+    if st.session_state.get('processing', False):
+        uploaded_file = st.session_state.get('uploaded_file')
+        model = st.session_state.get('model', 'mdx_extra')
+        
+        st.markdown("""
+        <div class="processing-container">
+            <h3>⚡ Processing Your Audio</h3>
+            <p>Using cloud AI to separate stems...</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Convert to base64
+        with st.spinner("Preparing audio..."):
+            audio_b64 = file_to_base64(uploaded_file)
+        
+        # Start separation
+        if replicate_token:
+            st.info("🔄 Using Replicate API...")
+            success, result = separate_with_replicate_api(audio_b64, model)
             
             if success:
-                st.success(f"✅ ¡{len(result)} stems generados!")
+                prediction_url = result
+                st.info("⏳ Waiting for processing to complete...")
                 
-                # Downloads
-                col1, col2 = st.columns(2)
-                
-                with col1:
-                    for filename, data in result.items():
-                        st.download_button(
-                            f"⬇️ {filename}",
-                            data=data,
-                            file_name=filename,
-                            mime="audio/mpeg"
-                        )
-                
-                with col2:
-                    # ZIP
-                    zip_buffer = BytesIO()
-                    with zipfile.ZipFile(zip_buffer, 'w') as zf:
-                        for filename, data in result.items():
-                            zf.writestr(filename, data)
+                # Poll for results
+                progress_bar = st.progress(0)
+                for i in range(60):  # Max 10 minutes
+                    status, data = check_prediction_status(prediction_url)
                     
-                    zip_buffer.seek(0)
-                    st.download_button(
-                        "📦 Descargar ZIP",
-                        data=zip_buffer.getvalue(),
-                        file_name=f"{Path(uploaded_file.name).stem}_stems.zip",
-                        mime="application/zip"
-                    )
+                    if status == "completed":
+                        progress_bar.progress(100)
+                        st.session_state.stems = data
+                        st.session_state.processing = False
+                        st.success("✅ Separation completed!")
+                        st.rerun()
+                    elif status == "failed":
+                        st.error(f"❌ Processing failed: {data}")
+                        st.session_state.processing = False
+                        break
+                    else:
+                        progress_bar.progress(min(95, i * 100 // 60))
+                        time.sleep(10)
+                
+                if status != "completed":
+                    st.error("⏰ Processing timeout. Try with a smaller file.")
+                    st.session_state.processing = False
+            else:
+                st.error(f"❌ API Error: {result}")
+                st.session_state.processing = False
+        
+        elif hf_token:
+            st.info("🔄 Using Hugging Face API...")
+            success, result = separate_with_huggingface(audio_b64)
+            
+            if success:
+                st.session_state.stems = {"stems": result}
+                st.session_state.processing = False
+                st.success("✅ Separation completed!")
+                st.rerun()
             else:
                 st.error(f"❌ {result}")
+                st.session_state.processing = False
+    
+    # Results section
+    if st.session_state.get('stems'):
+        st.markdown("""
+        <div class="results-container">
+            <h2>🎉 Separation Complete!</h2>
+            <p>Your stems are ready for download</p>
+        </div>
+        """, unsafe_allow_html=True)
+        
+        stems = st.session_state.stems
+        
+        # Download section
+        col1, col2 = st.columns(2)
+        
+        with col1:
+            st.markdown("**Individual Stems:**")
+            if isinstance(stems, dict):
+                for stem_name, stem_url in stems.items():
+                    if stem_url and stem_name != "stems":
+                        st.markdown(f"🎵 **{stem_name}**")
+                        st.link_button(f"⬇️ Download {stem_name}", stem_url)
+        
+        with col2:
+            st.markdown("**Complete Package:**")
+            if st.button("📦 Create ZIP Download"):
+                with st.spinner("Creating ZIP..."):
+                    zip_data = create_download_zip(stems)
+                    st.download_button(
+                        "⬇️ Download All Stems (ZIP)",
+                        data=zip_data,
+                        file_name="stems.zip",
+                        mime="application/zip"
+                    )
+        
+        # Reset button
+        if st.button("🔄 Process Another File"):
+            for key in ['processing', 'stems', 'uploaded_file', 'model']:
+                if key in st.session_state:
+                    del st.session_state[key]
+            st.rerun()
     
     # Footer
     st.markdown("---")
-    st.markdown("🎵 **Disband Simple** - Sin requirements.txt, instalación manual")
+    st.markdown("""
+    <div style="text-align: center; color: #666; padding: 1rem 0;">
+        <p>🎵 <strong>Disband</strong> - Powered by Replicate API</p>
+        <p>Free • Fast • Professional Quality</p>
+    </div>
+    """, unsafe_allow_html=True)
 
 if __name__ == "__main__":
-    main()    
+    main()
