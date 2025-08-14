@@ -1,246 +1,181 @@
-# 🎵 Disband - Beautiful AI Stem Separator
+# 🎵 Disband - Separador de Stems Profesional
 
-**Created by [@jeysshon](https://github.com/jeysshon)**
-
-Beautiful, fast, and professional stem separation powered by state-of-the-art AI. Transform any song into high-quality stems with just a few clicks.
+**Creado por [@jeysshon](https://github.com/jeysshon)**
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://disband.streamlit.app)
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![Demucs](https://img.shields.io/badge/AI-Demucs-green.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-![Disband Preview](https://via.placeholder.com/800x400/667eea/ffffff?text=Disband+AI+Stem+Separator)
+Separa cualquier canción en stems individuales usando inteligencia artificial de última generación. Rápido, simple y completamente gratis.
 
-## ✨ Features
+## ✨ Características
 
-- 🎨 **Beautiful Interface** - Modern, responsive design that's a joy to use
-- 🧠 **State-of-the-Art AI** - Powered by Demucs v4 Hybrid Transformer
-- ⚡ **Multiple Models** - Choose from 5 different AI models for various needs
-- 🎵 **High Quality** - Professional-grade stem separation
-- 💾 **Multiple Formats** - Export as MP3, WAV, or FLAC
-- 📱 **Responsive** - Works perfectly on desktop, tablet, and mobile
-- 🔒 **Privacy First** - All processing happens in the cloud, no data stored
-- 🆓 **Completely Free** - No limits, no subscriptions
+- 🚀 **Súper rápido** - Interfaz optimizada sin complicaciones
+- 🧠 **IA avanzada** - Powered by Demucs de Meta AI
+- 🎵 **4 stems** - Batería, bajo, voces e instrumentos
+- 💾 **Múltiples formatos** - MP3, WAV, FLAC, M4A
+- 📱 **Responsive** - Funciona en cualquier dispositivo
+- 🆓 **Completamente gratis** - Sin límites ni suscripciones
+- 🔒 **Privacidad total** - Todo se procesa en la nube, nada se guarda
 
-## 🚀 Try It Now
+## 🎯 Cómo usar
 
-**[🌟 Launch Disband](https://disband.streamlit.app)**
+1. **📁 Sube tu archivo** - Arrastra o selecciona tu música
+2. **🚀 Click "Separar"** - El proceso comienza automáticamente  
+3. **⏱️ Espera 5-15 min** - Ve el progreso en tiempo real
+4. **💾 Descarga** - Stems individuales o ZIP completo
 
-No installation required! Just click the link above and start separating stems immediately.
+## 🎼 Qué obtienes
 
-## 🎵 What Can You Do?
+| Stem | Descripción | Uso ideal |
+|------|-------------|-----------|
+| 🥁 **Drums** | Batería aislada | Backing tracks, practice |
+| 🎸 **Bass** | Bajo limpio | Análisis, covers |
+| 🎤 **Vocals** | Voces sin música | Karaoke, remixes |
+| 🎹 **Other** | Instrumentos/guitarras | Covers, análisis |
 
-### 🎸 For Musicians
-- **Learn techniques** from your favorite artists
-- **Create backing tracks** for practice and covers
-- **Isolate instruments** for detailed study
-- **Remove vocals** for karaoke tracks
+## 🚀 Pruébalo ahora
 
-### 🎛️ For Producers
-- **Extract stems** for remixing
-- **Analyze arrangements** and production techniques
-- **Create sample libraries** from existing tracks
-- **Reference mixing** decisions
+**[🌟 Ir a Disband](https://disband.streamlit.app)**
 
-### 🎓 For Educators
-- **Demonstrate arrangement** concepts
-- **Isolate parts** for student practice
-- **Analyze composition** techniques
-- **Create teaching materials**
+No requiere instalación, registro ni pagos. ¡Solo sube tu música y listo!
 
-## 🤖 Available AI Models
+## 🛠️ Tecnología
 
-| Model | Quality | Speed | Best For |
-|-------|---------|-------|----------|
-| 🏆 **htdemucs_ft** | ⭐⭐⭐⭐⭐ | Slow | Professional results |
-| 🎯 **htdemucs** | ⭐⭐⭐⭐ | Medium | Balanced quality/speed |
-| 🎼 **htdemucs_6s** | ⭐⭐⭐⭐ | Medium | 6 stems (piano + guitar) |
-| ⚡ **hdemucs_mmi** | ⭐⭐⭐ | Fast | Quick processing |
-| 🚀 **mdx_extra** | ⭐⭐⭐ | Very Fast | Rapid testing |
+- **Frontend:** Streamlit (Python)
+- **IA:** Demucs v4 (Meta AI Research)
+- **Audio:** PyTorch + torchaudio
+- **Deploy:** Streamlit Cloud
+- **Formato:** MP3 320kbps de salida
 
-## 📱 How to Use
+## 📊 Rendimiento
 
-1. **🌐 Visit** [disband.streamlit.app](https://disband.streamlit.app)
-2. **📁 Upload** your audio file (MP3, WAV, FLAC, M4A, AAC)
-3. **🤖 Choose** your AI model based on quality vs speed preference
-4. **💾 Select** output format (MP3 for smaller files, WAV for best quality)
-5. **🎯 Click** "Separate Stems" and let the AI work its magic
-6. **⬇️ Download** individual stems or everything as a ZIP
+| Duración canción | Tiempo proceso | Calidad |
+|------------------|----------------|---------|
+| 3-4 minutos | 5-10 min | ⭐⭐⭐⭐ |
+| 5-6 minutos | 10-15 min | ⭐⭐⭐⭐ |
+| 7+ minutos | 15-25 min | ⭐⭐⭐⭐ |
 
-## 🛠️ Local Development
+## 🔧 Para desarrolladores
 
-Want to run Disband locally or contribute? Here's how:
+### Estructura del proyecto
+```
+disband/
+├── app.py              # Aplicación principal
+├── requirements.txt    # Dependencias Python
+├── packages.txt       # Dependencias sistema (ffmpeg)
+└── README.md          # Este archivo
+```
 
-### Prerequisites
-- Python 3.8 or higher
-- Git
-
-### Setup
+### Instalación local
 ```bash
-# Clone the repository
+# Clonar repositorio
 git clone https://github.com/jeysshon/disband.git
 cd disband
 
-# Install dependencies
+# Instalar dependencias
 pip install -r requirements.txt
 
-# Run the app
+# Ejecutar localmente
 streamlit run app.py
 ```
 
-The app will open in your browser at `http://localhost:8501`
+### Deploy en Streamlit Cloud
+1. Fork este repositorio
+2. Conecta tu GitHub a [Streamlit Cloud](https://streamlit.io/cloud)
+3. Selecciona `app.py` como archivo principal
+4. ¡Deploy automático!
 
-## 🏗️ Tech Stack
+## 🎸 Casos de uso
 
-- **Frontend:** Streamlit with custom CSS
-- **AI Model:** Demucs v4 (Meta AI Research)
-- **Audio Processing:** PyTorch, torchaudio, librosa
-- **Deployment:** Streamlit Cloud
-- **Language:** Python 3.8+
+### Para músicos
+- **Covers de guitarra** - Backing tracks perfectos
+- **Análisis de técnicas** - Aislar instrumentos específicos
+- **Practice** - Tocar sobre stems profesionales
+- **Karaoke** - Tracks sin voces
 
-## 📋 Supported Formats
+### Para productores
+- **Remixes** - Stems de alta calidad
+- **Sampling** - Aislar elementos específicos
+- **Mashups** - Combinar diferentes tracks
+- **Análisis** - Estudiar arreglos profesionales
 
-### Input Formats
-- 🎵 **MP3** - Most common format
-- 🎵 **WAV** - Uncompressed audio
-- 🎵 **FLAC** - Lossless compression
-- 🎵 **M4A** - Apple format
-- 🎵 **AAC** - Advanced Audio Coding
+### Para educadores
+- **Enseñanza** - Mostrar instrumentos aislados
+- **Transcripción** - Facilitar análisis musical
+- **Composición** - Referencias y ejemplos
+- **Teoría musical** - Demostrar conceptos
 
-### Output Formats
-- 🎵 **MP3 320kbps** - Good quality, smaller files
-- 🎵 **WAV 32-bit float** - Maximum quality, larger files
-- 🎵 **FLAC** - Lossless compression
+## 📈 Comparación
 
-## 🎯 Use Cases & Examples
+| Característica | Disband | Moises.ai | Spleeter | LALAL.AI |
+|----------------|---------|-----------|----------|----------|
+| **Precio** | 🆓 Gratis | 💰 $4/mes | 🆓 Gratis | 💰 Freemium |
+| **Calidad** | ⭐⭐⭐⭐ | ⭐⭐⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
+| **Velocidad** | ⚡ Rápido | ⚡ Rápido | ⚡⚡ Muy rápido | ⚡ Medio |
+| **Facilidad** | ✅ Muy fácil | ✅ Fácil | ❌ Técnico | ✅ Fácil |
+| **Límites** | ✅ Sin límites | ❌ 5 tracks/mes | ✅ Sin límites | ❌ 10 min/mes |
+| **Privacidad** | ✅ Total | ⚠️ Cloud | ✅ Local | ⚠️ Cloud |
 
-### 🎸 Guitar Cover Artists
-```
-Input: "Master of Puppets.mp3"
-Model: htdemucs_ft (best quality)
-Output: drums.wav + bass.wav + other.wav + vocals.wav
-Result: Perfect backing track for guitar covers
-```
+## 🤝 Contribuir
 
-### 🎤 Vocal Removal
-```
-Input: Any song
-Model: htdemucs (balanced)
-Output: vocals.wav + instrumental stems
-Result: Instant karaoke track
-```
+¿Tienes ideas para mejorar Disband? ¡Contribuciones bienvenidas!
 
-### 🎛️ Remix Producers
-```
-Input: Popular track
-Model: htdemucs_6s (6 stems)
-Output: drums + bass + vocals + other + piano + guitar
-Result: Full stem pack for remixing
-```
+### Reportar bugs
+1. Ve a [Issues](https://github.com/jeysshon/disband/issues)
+2. Describe el problema claramente
+3. Incluye pasos para reproducir
+4. Adjunta screenshots si es útil
 
-## 🌟 Why Disband?
+### Sugerir características
+1. Abre un [Issue](https://github.com/jeysshon/disband/issues) con etiqueta "enhancement"
+2. Explica la funcionalidad deseada
+3. Describe el caso de uso
+4. ¡Discutamos la implementación!
 
-### vs Other Tools
+### Pull Requests
+1. Fork el repositorio
+2. Crea una rama: `git checkout -b mi-feature`
+3. Commit cambios: `git commit -m 'Añadir feature'`
+4. Push: `git push origin mi-feature`
+5. Abre un Pull Request
 
-| Feature | Disband | Competitor A | Competitor B |
-|---------|---------|-------------|-------------|
-| **Interface** | 🎨 Beautiful & Modern | 😐 Basic | 😐 Outdated |
-| **Quality** | 🏆 State-of-the-art | 🥈 Good | 🥉 Basic |
-| **Price** | 🆓 Free | 💰 $10/month | 💰 $5/month |
-| **Privacy** | 🔒 Secure | ⚠️ Data collection | ⚠️ Unknown |
-| **Speed** | ⚡ Multiple options | 🐌 Fixed | 🐌 Slow |
-| **Formats** | 📁 Multiple | 📁 Limited | 📁 MP3 only |
+## 📜 Licencia
 
-### Key Advantages
-- ✅ **No Registration** - Start using immediately
-- ✅ **No Limits** - Process unlimited files
-- ✅ **Best AI Models** - Latest Demucs v4 technology
-- ✅ **Beautiful Design** - Actually enjoyable to use
-- ✅ **Mobile Friendly** - Works on any device
-- ✅ **Open Source** - Transparent and trustworthy
+MIT License - Libre para uso personal y comercial.
 
-## 🚀 Deploy Your Own
+## 🙏 Agradecimientos
 
-Want to deploy your own instance? Easy!
+- **[Demucs](https://github.com/facebookresearch/demucs)** - Meta AI Research por el modelo de IA
+- **[Streamlit](https://streamlit.io)** - Framework web increíble
+- **[PyTorch](https://pytorch.org)** - Motor de deep learning
+- **Comunidad open source** - Por hacer esto posible
 
-### Streamlit Cloud (Recommended)
-1. Fork this repository
-2. Connect your GitHub to [Streamlit Cloud](https://streamlit.io/cloud)
-3. Deploy from your fork
-4. Share your custom instance!
+## 📞 Contacto
 
-### Docker
-```bash
-# Build the image
-docker build -t disband .
-
-# Run the container
-docker run -p 8501:8501 disband
-```
-
-### Manual Deployment
-Follow the Streamlit deployment guides for your preferred platform:
-- [Streamlit Cloud](https://docs.streamlit.io/streamlit-community-cloud)
-- [Heroku](https://docs.streamlit.io/knowledge-base/tutorials/deploy/heroku)
-- [AWS](https://docs.streamlit.io/knowledge-base/tutorials/deploy/aws)
-
-## 🤝 Contributing
-
-Contributions are welcome! Here's how you can help:
-
-### 🐛 Bug Reports
-Found a bug? [Open an issue](https://github.com/jeysshon/disband/issues) with:
-- Clear description of the problem
-- Steps to reproduce
-- Expected vs actual behavior
-- Screenshots if applicable
-
-### 💡 Feature Requests
-Have an idea? [Open an issue](https://github.com/jeysshon/disband/issues) with:
-- Clear description of the feature
-- Use case and benefits
-- Mockups or examples if applicable
-
-### 🔧 Pull Requests
-Ready to code? 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`git commit -m 'Add amazing feature'`)
-4. Push to the branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-## 📜 License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-## 🙏 Acknowledgments
-
-- **[Demucs](https://github.com/facebookresearch/demucs)** - Amazing AI model by Meta AI Research
-- **[Streamlit](https://streamlit.io)** - Beautiful web framework for ML apps
-- **[PyTorch](https://pytorch.org)** - Deep learning framework
-- **Open Source Community** - For making projects like this possible
-
-## 📞 Contact
-
-**Created by [@jeysshon](https://github.com/jeysshon)**
+**Creado por [@jeysshon](https://github.com/jeysshon)**
 
 - 🐙 **GitHub:** [@jeysshon](https://github.com/jeysshon)
-- 🌐 **Website:** [Coming Soon]
-- 📧 **Email:** [Contact via GitHub]
+- 🌐 **App:** [disband.streamlit.app](https://disband.streamlit.app)
+- 📧 **Issues:** [GitHub Issues](https://github.com/jeysshon/disband/issues)
 
-## ⭐ Show Your Support
+## ⭐ Apoya el proyecto
 
-If you found Disband useful, please consider:
-- ⭐ **Starring** this repository
-- 🍴 **Forking** to create your own version
-- 📢 **Sharing** with your friends and colleagues
-- 🐛 **Contributing** bug reports and features
+Si Disband te fue útil:
+- ⭐ **Dale una estrella** a este repositorio
+- 🍴 **Comparte** con tus amigos músicos
+- 🐛 **Reporta bugs** para mejorar la app
+- 💡 **Sugiere ideas** para nuevas características
 
 ---
 
 <div align="center">
 
-**🎵 Transform Any Song Into Perfect Stems**
+**🎵 Separa cualquier canción en stems perfectos**
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://disband.streamlit.app)
+[![Usar Disband](https://img.shields.io/badge/🚀_Usar_Disband-Gratis-success?style=for-the-badge)](https://disband.streamlit.app)
 
-*Made with ❤️ by [@jeysshon](https://github.com/jeysshon)*
+*Hecho con ❤️ por [@jeysshon](https://github.com/jeysshon)*
 
 </div>
