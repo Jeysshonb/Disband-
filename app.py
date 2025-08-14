@@ -303,42 +303,78 @@ def check_dependencies():
 
 def separate_audio_safe(uploaded_file, model, output_format):
     """Safe audio separation with error handling"""
+    import subprocess
+    import sys
+    import tempfile
+    from pathlib import Path
+    
     try:
-        # Try to import demucs here
+        # Try to import demucs
         import demucs
-        import subprocess
-        import sys
-        import tempfile
-        from pathlib import Path
-        
         # If we get here, demucs is available
         return separate_audio(uploaded_file, model, output_format)
         
     except ImportError:
-        # Demucs not available, try to install
-        st.error("""
-        🔧 **Instalando dependencias ahora...**
+        # Demucs not available, show clear installation progress
+        st.markdown("""
+        <div class="progress-container">
+            <div class="progress-icon">⚙️</div>
+            <h3>🔧 Instalando IA por primera vez</h3>
+            <p>Descargando Demucs (modelo de IA)...</p>
+            <p><strong>Esto toma 3-5 minutos. ¡Solo pasa una vez!</strong></p>
+        </div>
+        """, unsafe_allow_html=True)
         
-        La IA se está descargando. Esto puede tomar 2-3 minutos.
-        La página se recargará automáticamente cuando esté lista.
-        """)
+        progress_bar = st.progress(0)
+        status_text = st.empty()
         
         try:
-            with st.spinner("Instalando Demucs..."):
-                subprocess.run([
-                    sys.executable, "-m", "pip", "install", "demucs", "--quiet"
-                ], check=True, timeout=180)
+            status_text.text("📦 Descargando PyTorch...")
+            progress_bar.progress(20)
             
-            st.success("✅ ¡Instalación completa! Recargando...")
-            time.sleep(2)
-            st.rerun()
+            # Install torch first
+            result1 = subprocess.run([
+                sys.executable, "-m", "pip", "install", "torch", "torchaudio", "--quiet"
+            ], capture_output=True, text=True, timeout=300)
             
+            if result1.returncode != 0:
+                st.error(f"❌ Error instalando PyTorch: {result1.stderr}")
+                return False, {}, "Error instalando PyTorch"
+            
+            status_text.text("🧠 Instalando Demucs IA...")
+            progress_bar.progress(60)
+            
+            # Install demucs
+            result2 = subprocess.run([
+                sys.executable, "-m", "pip", "install", "demucs", "--quiet"
+            ], capture_output=True, text=True, timeout=300)
+            
+            if result2.returncode != 0:
+                st.error(f"❌ Error instalando Demucs: {result2.stderr}")
+                return False, {}, "Error instalando Demucs"
+            
+            status_text.text("✅ Instalación completa!")
+            progress_bar.progress(100)
+            
+            st.success("🎉 ¡IA instalada correctamente! Ahora procesando tu audio...")
+            
+            # Clear progress indicators
+            progress_bar.empty()
+            status_text.empty()
+            
+            # Now try to separate audio
+            return separate_audio(uploaded_file, model, output_format)
+            
+        except subprocess.TimeoutExpired:
+            st.error("⏰ Instalación tomó demasiado tiempo. Intenta recargar la página.")
+            return False, {}, "Timeout en instalación"
         except Exception as e:
-            st.error(f"❌ Error en instalación: {str(e)}")
-            return False, {}, "Error de instalación"
+            st.error(f"❌ Error durante instalación: {str(e)}")
+            return False, {}, f"Error de instalación: {str(e)}"
     
     except Exception as e:
-        return False, {}, f"❌ Error: {str(e)}"
+        st.error(f"❌ Error inesperado: {str(e)}")
+        return False, {}, f"Error: {str(e)}"
 
 def get_model_info():
     """Get information about available models"""
@@ -405,7 +441,7 @@ def create_model_card(model_key, model_info, selected_model):
     """
 
 def separate_audio(uploaded_file, model, output_format):
-    """Separate audio using Demucs"""
+    """Separate audio using Demucs with detailed progress"""
     try:
         # Create temp directory
         with tempfile.TemporaryDirectory() as temp_dir:
@@ -437,19 +473,24 @@ def separate_audio(uploaded_file, model, output_format):
             
             cmd.append(str(input_path))
             
+            # Show processing message
+            st.markdown("""
+            <div class="progress-container">
+                <div class="progress-icon">🎵</div>
+                <h3>🚀 IA trabajando en tu música</h3>
+                <p>Separando con máxima calidad profesional...</p>
+                <p><strong>Tiempo estimado: 15-30 minutos</strong></p>
+            </div>
+            """, unsafe_allow_html=True)
+            
             # Progress tracking
-            progress_placeholder = st.empty()
-            log_placeholder = st.empty()
+            progress_bar = st.progress(0)
+            status_text = st.empty()
+            log_container = st.container()
             
             # Execute separation
-            with progress_placeholder.container():
-                st.markdown("""
-                <div class="progress-container">
-                    <div class="progress-icon">🎵</div>
-                    <h3>AI is working its magic...</h3>
-                    <p>This may take a few minutes depending on your model choice</p>
-                </div>
-                """, unsafe_allow_html=True)
+            status_text.text("🔄 Iniciando separación de IA...")
+            progress_bar.progress(10)
             
             process = subprocess.Popen(
                 cmd,
@@ -458,22 +499,45 @@ def separate_audio(uploaded_file, model, output_format):
                 text=True
             )
             
-            # Read output
+            # Read output with better progress tracking
             logs = []
             for line in process.stdout:
                 line = line.strip()
                 if line:
                     logs.append(line)
-                    if len(logs) > 10:
+                    if len(logs) > 20:
                         logs.pop(0)
                     
-                    with log_placeholder.container():
-                        st.code('\n'.join(logs[-5:]), language='text')
+                    # Update progress based on output
+                    if "Loading" in line or "loading" in line:
+                        status_text.text("📂 Cargando modelo de IA...")
+                        progress_bar.progress(30)
+                    elif "Separating" in line or "Processing" in line:
+                        status_text.text("🎯 Separando instrumentos...")
+                        progress_bar.progress(60)
+                    elif "Saving" in line or "Writing" in line:
+                        status_text.text("💾 Guardando resultados...")
+                        progress_bar.progress(90)
+                    elif "%" in line:
+                        # Try to extract percentage if available
+                        try:
+                            import re
+                            percent_match = re.search(r'(\d+)%', line)
+                            if percent_match:
+                                percent = int(percent_match.group(1))
+                                progress_bar.progress(min(30 + (percent * 0.6), 95))
+                        except:
+                            pass
+                    
+                    # Show recent logs
+                    with log_container:
+                        if logs:
+                            st.code('\n'.join(logs[-5:]), language='text')
             
             process.wait()
             
-            progress_placeholder.empty()
-            log_placeholder.empty()
+            status_text.text("✅ Procesamiento completado!")
+            progress_bar.progress(100)
             
             if process.returncode == 0:
                 # Find output files
@@ -489,14 +553,19 @@ def separate_audio(uploaded_file, model, output_format):
                         with open(stem_file, "rb") as f:
                             stem_files[stem_file.name] = f.read()
                     
-                    return True, stem_files, f"🎉 Successfully separated into {len(stem_files)} stems!"
+                    # Clear progress indicators
+                    progress_bar.empty()
+                    status_text.empty()
+                    log_container.empty()
+                    
+                    return True, stem_files, f"🎉 ¡{len(stem_files)} stems generados con éxito!"
                 else:
-                    return False, {}, "❌ No output files found"
+                    return False, {}, "❌ No se encontraron archivos de salida"
             else:
-                return False, {}, "❌ Separation failed"
+                return False, {}, f"❌ Error durante la separación (código: {process.returncode})"
                 
     except Exception as e:
-        return False, {}, f"❌ Error: {str(e)}"
+        return False, {}, f"❌ Error inesperado: {str(e)}"
 
 def create_zip_download(stem_files, original_filename):
     """Create ZIP file for download"""
