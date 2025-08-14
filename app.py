@@ -114,11 +114,12 @@ def separate_with_replicate_api(uploaded_file, model="mdx_extra"):
         else:
             mime_type = "audio/mp3"  # Default
         
-        # Usar modelo correcto de Demucs disponible
+        # Configuración correcta para cjwbw/demucs en Replicate
         data = {
-            "version": "07c6b006d47c0188bb1c8288a81fa2f1b0e82f1d8a1b1cdf05c0aef55a1da2b4",  # Meta Demucs v4
+            "model": "cjwbw/demucs",
             "input": {
-                "audio": f"data:{mime_type};base64,{audio_b64}"
+                "audio": f"data:{mime_type};base64,{audio_b64}",
+                "model": model
             }
         }
         
