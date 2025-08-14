@@ -6,15 +6,16 @@ import zipfile
 from pathlib import Path
 from io import BytesIO
 import time
+import os
 
-# Configuración básica
+# Configuración
 st.set_page_config(
-    page_title="Disband - Separador de Stems",
+    page_title="Disband - Separador Rápido",
     page_icon="🎵",
     layout="centered"
 )
 
-# CSS simple y bonito
+# CSS simple
 st.markdown("""
 <style>
     .main-header {
@@ -25,33 +26,27 @@ st.markdown("""
         color: white;
         margin-bottom: 2rem;
     }
-    .upload-section {
-        background: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: 10px;
-        margin: 1rem 0;
-    }
-    .status-box {
-        background: #e3f2fd;
-        padding: 1rem;
-        border-radius: 8px;
-        border-left: 4px solid #2196f3;
-        margin: 1rem 0;
-    }
-    .success-box {
+    .status-ok {
         background: #e8f5e8;
         padding: 1rem;
         border-radius: 8px;
         border-left: 4px solid #4caf50;
         margin: 1rem 0;
     }
-    .processing-box {
+    .processing {
         background: #fff3e0;
-        padding: 1rem;
+        padding: 1.5rem;
         border-radius: 8px;
         border-left: 4px solid #ff9800;
         margin: 1rem 0;
         text-align: center;
+    }
+    .results {
+        background: #e8f5e8;
+        padding: 1.5rem;
+        border-radius: 8px;
+        color: #2e7d32;
+        margin: 1rem 0;
     }
     .stem-file {
         background: white;
@@ -66,7 +61,6 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 def init_session():
-    """Inicializar variables de sesión"""
     if 'processing' not in st.session_state:
         st.session_state.processing = False
     if 'completed' not in st.session_state:
@@ -74,16 +68,51 @@ def init_session():
     if 'stems' not in st.session_state:
         st.session_state.stems = {}
 
-def check_ready():
-    """Verificar si está todo listo"""
+def check_spleeter():
+    """Verificar si Spleeter está listo"""
     try:
-        import demucs
-        return True
-    except ImportError:
+        result = subprocess.run([sys.executable, "-c", "import spleeter"], 
+                               capture_output=True, text=True)
+        return result.returncode == 0
+    except:
         return False
 
-def process_audio(uploaded_file):
-    """Procesar audio y mostrar progreso en tiempo real"""
+def install_spleeter():
+    """Instalar Spleeter rápidamente"""
+    try:
+        st.info("📦 Instalando Spleeter (30 segundos)...")
+        
+        progress = st.progress(0)
+        
+        # Instalar spleeter
+        progress.progress(20)
+        result = subprocess.run([
+            sys.executable, "-m", "pip", "install", "spleeter==2.3.0", "--quiet"
+        ], capture_output=True, text=True, timeout=120)
+        
+        progress.progress(60)
+        
+        if result.returncode == 0:
+            # Instalar tensorflow
+            subprocess.run([
+                sys.executable, "-m", "pip", "install", "tensorflow==2.5.0", "--quiet"  
+            ], capture_output=True, text=True, timeout=120)
+            
+            progress.progress(100)
+            st.success("✅ ¡Spleeter instalado!")
+            time.sleep(1)
+            progress.empty()
+            return True
+        else:
+            st.error(f"Error: {result.stderr}")
+            return False
+            
+    except Exception as e:
+        st.error(f"Error instalando: {str(e)}")
+        return False
+
+def separate_with_spleeter(uploaded_file):
+    """Separar con Spleeter"""
     
     with tempfile.TemporaryDirectory() as temp_dir:
         temp_path = Path(temp_dir)
@@ -95,195 +124,163 @@ def process_audio(uploaded_file):
         
         # Configurar salida
         output_dir = temp_path / "separated"
-        output_dir.mkdir()
         
-        # Comando demucs
+        # Comando spleeter
         cmd = [
-            sys.executable, "-m", "demucs",
-            "--model", "htdemucs",
-            "--out", str(output_dir),
-            "--mp3",
+            sys.executable, "-m", "spleeter", "separate",
+            "-p", "spleeter:4stems-16kHz",
+            "-o", str(output_dir),
             str(input_file)
         ]
         
-        # Contenedores para mostrar progreso
+        # Mostrar progreso
         status_container = st.empty()
         progress_container = st.empty()
         log_container = st.empty()
         
-        # Mostrar estado inicial
         with status_container.container():
             st.markdown("""
-            <div class="processing-box">
-                <h3>🎵 Procesando tu música</h3>
-                <p>Esto tomará unos minutos...</p>
+            <div class="processing">
+                <h3>🚀 Separando con Spleeter</h3>
+                <p>Mucho más rápido que Demucs!</p>
             </div>
             """, unsafe_allow_html=True)
         
-        # Barra de progreso
         progress_bar = progress_container.progress(0)
         
         try:
-            # Ejecutar demucs
+            # Ejecutar spleeter
             process = subprocess.Popen(
                 cmd,
                 stdout=subprocess.PIPE,
                 stderr=subprocess.STDOUT,
-                text=True,
-                universal_newlines=True
+                text=True
             )
             
-            # Leer output en tiempo real
-            current_progress = 0
-            logs = []
+            current_progress = 10
+            progress_bar.progress(current_progress)
             
+            logs = []
             for line in process.stdout:
                 line = line.strip()
                 if line:
                     logs.append(line)
                     
                     # Actualizar progreso
-                    if "Loading" in line and current_progress < 30:
-                        progress_bar.progress(30)
-                        current_progress = 30
-                        with log_container:
-                            st.text("📥 Cargando modelo...")
-                    elif "Separating" in line and current_progress < 70:
-                        progress_bar.progress(70)
-                        current_progress = 70
+                    if "separate" in line.lower() and current_progress < 50:
+                        current_progress = 50
+                        progress_bar.progress(current_progress)
                         with log_container:
                             st.text("🎯 Separando instrumentos...")
-                    elif "Saving" in line and current_progress < 90:
-                        progress_bar.progress(90)
+                    elif "done" in line.lower() or "finished" in line.lower():
                         current_progress = 90
+                        progress_bar.progress(current_progress)
                         with log_container:
-                            st.text("💾 Guardando archivos...")
+                            st.text("💾 Finalizando...")
                     
-                    # Mostrar logs recientes
-                    if len(logs) > 8:
+                    # Mostrar logs
+                    if len(logs) > 5:
                         logs.pop(0)
                     
                     with log_container:
-                        st.code('\n'.join(logs[-3:]))
+                        st.code('\n'.join(logs[-2:]))
             
-            # Esperar finalización
             process.wait()
-            
-            # Completar progreso
             progress_bar.progress(100)
-            with log_container:
-                st.text("✅ ¡Completado!")
             
             time.sleep(1)
-            
-            # Limpiar indicadores
             status_container.empty()
             progress_container.empty()
             log_container.empty()
             
             if process.returncode == 0:
-                # Buscar archivos separados
-                model_dir = output_dir / "htdemucs" / input_file.stem
+                # Buscar archivos
+                separated_folder = output_dir / input_file.stem
                 
-                if model_dir.exists():
+                if separated_folder.exists():
                     stem_files = {}
-                    for mp3_file in model_dir.glob("*.mp3"):
-                        with open(mp3_file, "rb") as f:
-                            stem_files[mp3_file.name] = f.read()
+                    for wav_file in separated_folder.glob("*.wav"):
+                        with open(wav_file, "rb") as f:
+                            stem_files[wav_file.name] = f.read()
                     
                     return True, stem_files
                 else:
-                    st.error("❌ No se encontraron archivos separados")
+                    st.error("❌ No se encontraron archivos")
                     return False, {}
             else:
-                st.error(f"❌ Error en el procesamiento (código {process.returncode})")
+                st.error("❌ Error en separación")
                 return False, {}
                 
         except Exception as e:
             st.error(f"❌ Error: {str(e)}")
             return False, {}
 
-def create_download_zip(stems, filename):
-    """Crear ZIP para descarga"""
+def create_zip(stems, filename):
+    """Crear ZIP"""
     zip_buffer = BytesIO()
-    with zipfile.ZipFile(zip_buffer, 'w', zipfile.ZIP_DEFLATED) as zf:
-        for stem_name, stem_data in stems.items():
-            zf.writestr(f"{Path(filename).stem}_separado/{stem_name}", stem_data)
+    with zipfile.ZipFile(zip_buffer, 'w') as zf:
+        for name, data in stems.items():
+            zf.writestr(f"{Path(filename).stem}_stems/{name}", data)
     zip_buffer.seek(0)
     return zip_buffer.getvalue()
 
 def main():
-    """Aplicación principal"""
     init_session()
     
     # Header
     st.markdown("""
     <div class="main-header">
         <h1>🎵 Disband</h1>
-        <h3>Separador de Stems Profesional</h3>
-        <p>Por @jeysshon - Rápido, Simple, Efectivo</p>
+        <h3>Separador Rápido de Stems</h3>
+        <p>Por @jeysshon - Versión Spleeter (súper rápida)</p>
     </div>
     """, unsafe_allow_html=True)
     
-    # Verificar estado
-    if not check_ready():
-        st.markdown("""
-        <div class="status-box">
-            <h4>⏳ Preparando la aplicación...</h4>
-            <p>Streamlit está instalando las dependencias. Esto toma unos minutos la primera vez.</p>
-            <p><strong>Refresca la página en 2-3 minutos.</strong></p>
-        </div>
-        """, unsafe_allow_html=True)
+    # Verificar Spleeter
+    if not check_spleeter():
+        st.warning("⚡ Instalando Spleeter (esto es rápido)...")
         
-        if st.button("🔄 Verificar"):
-            st.rerun()
+        if st.button("🚀 Instalar Spleeter"):
+            if install_spleeter():
+                st.rerun()
         return
+    
+    # Mostrar que está listo
+    st.markdown("""
+    <div class="status-ok">
+        <h4>✅ ¡Listo para separar!</h4>
+        <p>Spleeter instalado y funcionando</p>
+    </div>
+    """, unsafe_allow_html=True)
     
     # Interface principal
     if not st.session_state.completed:
-        st.markdown("""
-        <div class="upload-section">
-            <h3>📁 Sube tu música</h3>
-            <p>Formatos: MP3, WAV, FLAC, M4A</p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown("### 📁 Sube tu música")
         
         uploaded_file = st.file_uploader(
-            "Selecciona tu archivo",
+            "Selecciona archivo",
             type=['mp3', 'wav', 'flac', 'm4a'],
             label_visibility="collapsed"
         )
         
         if uploaded_file:
-            # Info del archivo
             file_size = len(uploaded_file.getbuffer()) / (1024 * 1024)
             
-            st.markdown(f"""
-            <div class="success-box">
-                <strong>📄 {uploaded_file.name}</strong><br>
-                📏 Tamaño: {file_size:.1f} MB<br>
-                🎵 Tipo: {uploaded_file.type}
-            </div>
-            """, unsafe_allow_html=True)
+            st.success(f"""
+            **📄 {uploaded_file.name}**  
+            📏 Tamaño: {file_size:.1f} MB  
+            ⚡ Tiempo estimado: 2-5 minutos
+            """)
             
-            # Configuración
-            st.markdown("### ⚙️ Configuración")
-            col1, col2 = st.columns(2)
-            with col1:
-                st.info("🎯 **Modelo:** htdemucs (Balanceado)")
-            with col2:
-                st.info("💾 **Formato:** MP3 320kbps")
-            
-            # Botón procesar
             if not st.session_state.processing:
-                if st.button("🚀 Separar Stems", type="primary", use_container_width=True):
+                if st.button("🚀 Separar Ahora", type="primary", use_container_width=True):
                     st.session_state.processing = True
                     st.rerun()
             else:
-                # Procesar archivo
-                success, stems = process_audio(uploaded_file)
+                # Procesar
+                success, stems = separate_with_spleeter(uploaded_file)
                 
-                if success and stems:
+                if success:
                     st.session_state.stems = stems
                     st.session_state.completed = True
                     st.session_state.processing = False
@@ -291,22 +288,20 @@ def main():
                 else:
                     st.session_state.processing = False
     
-    # Mostrar resultados
+    # Resultados
     if st.session_state.completed and st.session_state.stems:
         st.markdown("""
-        <div class="success-box">
+        <div class="results">
             <h3>🎉 ¡Separación completada!</h3>
-            <p>Tus stems están listos para descargar</p>
+            <p>Tus stems están listos</p>
         </div>
         """, unsafe_allow_html=True)
         
-        # Lista de stems
-        st.markdown("### 🎵 Archivos separados:")
-        
+        # Mostrar stems
         stem_icons = {
-            "drums": "🥁",
+            "vocals": "🎤",
+            "drums": "🥁", 
             "bass": "🎸",
-            "vocals": "🎤", 
             "other": "🎹"
         }
         
@@ -322,33 +317,29 @@ def main():
             """, unsafe_allow_html=True)
         
         # Descargas
-        st.markdown("### 💾 Descargar:")
-        
         col1, col2 = st.columns(2)
         
         with col1:
-            st.markdown("**Archivos individuales:**")
-            for stem_name, stem_data in st.session_state.stems.items():
+            st.markdown("**Individuales:**")
+            for name, data in st.session_state.stems.items():
                 st.download_button(
-                    f"⬇️ {stem_name}",
-                    data=stem_data,
-                    file_name=stem_name,
-                    mime="audio/mpeg"
+                    f"⬇️ {name}",
+                    data=data,
+                    file_name=name,
+                    mime="audio/wav"
                 )
         
         with col2:
             st.markdown("**Todo junto:**")
             if uploaded_file:
-                zip_data = create_download_zip(st.session_state.stems, uploaded_file.name)
+                zip_data = create_zip(st.session_state.stems, uploaded_file.name)
                 st.download_button(
-                    "📦 Descargar ZIP",
+                    "📦 ZIP completo",
                     data=zip_data,
-                    file_name=f"{Path(uploaded_file.name).stem}_stems.zip",
-                    mime="application/zip"
+                    file_name=f"{Path(uploaded_file.name).stem}_stems.zip"
                 )
         
-        # Botón para nueva separación
-        if st.button("🔄 Separar otra canción"):
+        if st.button("🔄 Separar otra"):
             st.session_state.processing = False
             st.session_state.completed = False
             st.session_state.stems = {}
@@ -356,12 +347,7 @@ def main():
     
     # Footer
     st.markdown("---")
-    st.markdown("""
-    <div style="text-align: center; color: #666; padding: 1rem;">
-        <p><strong>Disband</strong> - Creado por @jeysshon</p>
-        <p>Gratis • Rápido • Sin límites</p>
-    </div>
-    """, unsafe_allow_html=True)
+    st.markdown("**Disband** por @jeysshon • Powered by Spleeter")
 
 if __name__ == "__main__":
     main()
