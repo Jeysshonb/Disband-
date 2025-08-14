@@ -295,38 +295,58 @@ def load_css():
 
 def check_dependencies():
     """Check if required packages are installed"""
-    try:
-        import demucs
-        return True, "✅ Ready to separate stems!"
-    except ImportError:
-        return False, "Installing dependencies..."
-
-def install_demucs():
-    """Install Demucs with progress indication"""
-    progress_bar = st.progress(0)
-    status_text = st.empty()
+    missing = []
     
     try:
-        status_text.text("📦 Installing Demucs...")
-        progress_bar.progress(25)
-        
-        subprocess.run([
-            sys.executable, "-m", "pip", "install", "demucs", "--quiet"
-        ], check=True)
-        
-        progress_bar.progress(75)
-        status_text.text("✅ Installation complete!")
-        progress_bar.progress(100)
-        
-        time.sleep(1)
-        progress_bar.empty()
-        status_text.empty()
-        
-        return True
-    except subprocess.CalledProcessError:
-        progress_bar.empty()
-        status_text.empty()
-        return False
+        import demucs
+    except ImportError:
+        missing.append("demucs")
+    
+    try:
+        import torch
+    except ImportError:
+        missing.append("torch")
+    
+    try:
+        import torchaudio
+    except ImportError:
+        missing.append("torchaudio")
+    
+    if missing:
+        return False, f"Missing packages: {', '.join(missing)}"
+    else:
+        return True, "✅ Ready to separate stems!"
+
+def show_dependency_error():
+    """Show dependency installation instructions"""
+    st.error("""
+    ❌ **Dependencies not installed**
+    
+    This usually happens on the first deployment. Please:
+    
+    1. **Wait 2-3 minutes** for Streamlit Cloud to finish installing packages
+    2. **Refresh the page** 
+    3. If the problem persists, check that your `requirements.txt` is correct
+    
+    The app will work automatically once dependencies are installed.
+    """)
+    
+    with st.expander("🔧 Technical Details"):
+        st.code("""
+        Required packages:
+        - streamlit
+        - torch (CPU version)
+        - torchaudio (CPU version) 
+        - demucs
+        - numpy
+        - scipy
+        - soundfile
+        """)
+    
+    st.info("💡 **Tip:** This is normal for new deployments. Just wait a moment and refresh!")
+    
+    if st.button("🔄 Check Again"):
+        st.rerun()
 
 def get_model_info():
     """Get information about available models"""
@@ -522,18 +542,8 @@ def main():
     deps_ok, deps_msg = check_dependencies()
     
     if not deps_ok:
-        st.markdown(f"""
-        <div class="warning-message">
-            <h3>⚡ Setting up Disband</h3>
-            <p>Installing AI models for the first time...</p>
-        </div>
-        """, unsafe_allow_html=True)
-        
-        if install_demucs():
-            st.rerun()
-        else:
-            st.error("❌ Failed to install dependencies. Please try refreshing the page.")
-            return
+        show_dependency_error()
+        return
     
     # Main interface
     col1, col2 = st.columns([2, 1])
