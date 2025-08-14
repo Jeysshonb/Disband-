@@ -89,9 +89,9 @@ def separate_with_replicate_simple(uploaded_file):
         else:
             mime_type = "audio/mp3"
         
-        # Payload para ryan5453/demucs (más simple)
+        # Payload para ryan5453/demucs (versión CORRECTA que existe)
         data = {
-            "version": "bd1ba71f38bae6b8b03be4d1d71a3a0c11e5a1b8b83b5dc95dd31d1b47b12094",
+            "version": "777df2639cdc2f56214f1423c73e0ab54d0d3db4bfd5714a59e5b0e3d060078f",
             "input": {
                 "audio": f"data:{mime_type};base64,{audio_b64}"
             }
