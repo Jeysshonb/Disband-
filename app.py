@@ -295,58 +295,36 @@ def load_css():
 
 def check_dependencies():
     """Check if required packages are installed"""
-    missing = []
-    
     try:
         import demucs
-    except ImportError:
-        missing.append("demucs")
-    
-    try:
-        import torch
-    except ImportError:
-        missing.append("torch")
-    
-    try:
-        import torchaudio
-    except ImportError:
-        missing.append("torchaudio")
-    
-    if missing:
-        return False, f"Missing packages: {', '.join(missing)}"
-    else:
         return True, "✅ Ready to separate stems!"
+    except ImportError:
+        return False, "Dependencies still installing..."
 
 def show_dependency_error():
     """Show dependency installation instructions"""
-    st.error("""
-    ❌ **Dependencies not installed**
+    st.markdown("""
+    <div class="warning-message">
+        <h3>⚡ Setting up Disband</h3>
+        <p>Dependencies are being installed by Streamlit Cloud...</p>
+        <p><strong>Please wait 3-5 minutes and refresh this page.</strong></p>
+    </div>
+    """, unsafe_allow_html=True)
     
-    This usually happens on the first deployment. Please:
-    
-    1. **Wait 2-3 minutes** for Streamlit Cloud to finish installing packages
-    2. **Refresh the page** 
-    3. If the problem persists, check that your `requirements.txt` is correct
-    
-    The app will work automatically once dependencies are installed.
+    st.info("""
+    **What's happening:**
+    1. Streamlit Cloud is installing PyTorch and Demucs
+    2. This only happens once on first deployment
+    3. Future visits will be instant
     """)
     
-    with st.expander("🔧 Technical Details"):
-        st.code("""
-        Required packages:
-        - streamlit
-        - torch (CPU version)
-        - torchaudio (CPU version) 
-        - demucs
-        - numpy
-        - scipy
-        - soundfile
-        """)
-    
-    st.info("💡 **Tip:** This is normal for new deployments. Just wait a moment and refresh!")
-    
-    if st.button("🔄 Check Again"):
+    if st.button("🔄 Check Again", use_container_width=True):
         st.rerun()
+        
+    st.markdown("---")
+    st.markdown("⏱️ **Expected wait time:** 3-5 minutes")
+    st.markdown("🔄 **Then:** Refresh this page")
+    st.markdown("✅ **Result:** Beautiful stem separation!")
 
 def get_model_info():
     """Get information about available models"""
