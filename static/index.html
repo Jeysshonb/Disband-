@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Disband AI - Separador Profesional de Audio y Stems</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <!-- Fondo con esferas de luz difuminadas -->
+  <div class="ambient-glow glow-1"></div>
+  <div class="ambient-glow glow-2"></div>
+  <div class="ambient-glow glow-3"></div>
+
+  <div class="app-container">
+    <!-- Barra Superior / Navbar -->
+    <header class="app-header">
+      <div class="logo">
+        <div class="logo-icon">
+          <span></span><span></span><span></span><span></span><span></span>
+        </div>
+        <div class="logo-text">
+          <h1>DISBAND <span class="badge-ai">AI</span></h1>
+          <p class="subtitle">Separador de Stems Profesional • Demucs v4</p>
+        </div>
+      </div>
+
+      <!-- Badge de Hardware del Sistema -->
+      <div class="hw-badge" id="hwBadge" title="Hardware detectado">
+        <span class="hw-dot"></span>
+        <span id="hwText">Detectando hardware...</span>
+      </div>
+    </header>
+
+    <!-- Alerta si falta FFmpeg -->
+    <div id="ffmpegAlert" class="alert-banner hidden">
+      <div class="alert-icon">⚠️</div>
+      <div class="alert-content">
+        <strong>FFmpeg no detectado en el sistema:</strong> Se requiere FFmpeg para procesar streams de audio. 
+        <button id="btnFixFFmpeg" class="btn-sm">Instalar automáticamente</button>
+      </div>
+    </div>
+
+    <!-- Sección Principal: Entrada de Contenido -->
+    <main class="main-card">
+      <!-- Selector de Modo (Tabs) -->
+      <div class="tabs">
+        <button class="tab-btn active" data-tab="urlTab">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+          Pegar Enlace de Video / Audio
+        </button>
+        <button class="tab-btn" data-tab="fileTab">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+          Subir Archivo Local
+        </button>
+      </div>
+
+      <!-- TAB 1: Pegar URL (Estilo y2mate) -->
+      <div class="tab-content active" id="urlTab">
+        <div class="url-input-wrapper">
+          <div class="input-container">
+            <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <input type="text" id="urlInput" placeholder="Pega el enlace de YouTube, TikTok, SoundCloud, Instagram..." autocomplete="off" />
+            <button id="btnPaste" class="btn-paste" title="Pegar del portapapeles">Pegar</button>
+          </div>
+          <button id="btnProcessUrl" class="btn-primary">
+            <span>Extraer & Separar</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="5" y1="12" x2="19" y2="12"></line><polyline points="12 5 19 12 12 19"></polyline></svg>
+          </button>
+        </div>
+
+        <!-- Vista previa rápida de enlace -->
+        <div id="urlPreviewCard" class="preview-card hidden">
+          <img id="previewThumb" src="" alt="Thumbnail" />
+          <div class="preview-details">
+            <h4 id="previewTitle">Cargando título...</h4>
+            <p id="previewAuthor" class="preview-sub">Canal / Autor</p>
+            <span class="hq-badge">Máxima Calidad (Audio PCM / 320k)</span>
+          </div>
+        </div>
+
+        <div class="supported-tags">
+          <span>YouTube</span>
+          <span>TikTok</span>
+          <span>Instagram</span>
+          <span>SoundCloud</span>
+          <span>Facebook</span>
+          <span>Twitter / X</span>
+        </div>
+      </div>
+
+      <!-- TAB 2: Subir Archivo Local -->
+      <div class="tab-content" id="fileTab">
+        <div class="dropzone" id="dropzone">
+          <input type="file" id="fileInput" accept="audio/*,video/*,.mp3,.wav,.flac,.m4a,.ogg,.mp4,.mkv,.avi,.mov" hidden />
+          <div class="dropzone-icon">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242"></path><path d="M12 12v9"></path><path d="m8 16 4-4 4 4"></path></svg>
+          </div>
+          <h3>Arrastra tu archivo aquí o <span class="highlight">explora en tu PC</span></h3>
+          <p class="dropzone-sub">Soporta cualquier formato de video o audio: MP4, MKV, MP3, WAV, FLAC, M4A...</p>
+        </div>
+
+        <div id="selectedFileCard" class="file-card hidden">
+          <div class="file-icon">🎵</div>
+          <div class="file-info">
+            <div id="selectedFileName" class="file-name">audio.mp3</div>
+            <div id="selectedFileSize" class="file-size">0 MB</div>
+          </div>
+          <button id="btnProcessFile" class="btn-primary">
+            <span>Iniciar Separación IA</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- SECCIÓN DE PROGRESO EN VIVO (SSE) -->
+      <div id="progressSection" class="progress-section hidden">
+        <div class="progress-header">
+          <div class="progress-status-icon pulse-animation">⚡</div>
+          <div class="progress-title-wrap">
+            <h3 id="progressTitle">Procesando con Demucs v4...</h3>
+            <p id="progressMessage">Iniciando pipeline de IA...</p>
+          </div>
+          <span id="progressPercentage" class="progress-percent">0%</span>
+        </div>
+
+        <div class="progress-bar-track">
+          <div id="progressBarFill" class="progress-bar-fill" style="width: 0%;"></div>
+        </div>
+
+        <div class="stepper-pipeline">
+          <div class="step-item" id="step1">
+            <div class="step-dot">1</div>
+            <span>Descarga HQ</span>
+          </div>
+          <div class="step-item" id="step2">
+            <div class="step-dot">2</div>
+            <span>Carga de Modelo</span>
+          </div>
+          <div class="step-item" id="step3">
+            <div class="step-dot">3</div>
+            <span>Separación IA</span>
+          </div>
+          <div class="step-item" id="step4">
+            <div class="step-dot">4</div>
+            <span>Karaoke & ZIP</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- SECCIÓN DE RESULTADOS: REPRODUCTOR MULTIPISTA Y DESCARGAS -->
+      <div id="resultsSection" class="results-section hidden">
+        <div class="results-header">
+          <div>
+            <span class="success-badge">✅ PROCESAMIENTO COMPLETADO</span>
+            <h2 id="resultSongTitle" class="song-title">Título de la Canción</h2>
+            <p class="song-subtitle">4 Stems Aislados + Pista Karaoke creados con IA de estudio</p>
+          </div>
+
+          <div class="results-actions">
+            <!-- Botón para abrir la carpeta directamente en Windows -->
+            <button id="btnOpenFolder" class="btn-folder-open" title="Abrir carpeta de pistas en el explorador de Windows">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+              <span>Abrir Carpeta en PC</span>
+            </button>
+
+            <!-- Botón de Descarga Masiva ZIP -->
+            <a id="btnDownloadZip" href="#" class="btn-zip-download">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>Descargar Todo (.ZIP)</span>
+            </a>
+          </div>
+        </div>
+
+        <!-- Master Player Controls -->
+        <div class="master-player-bar">
+          <button id="btnMasterPlay" class="btn-master-play">
+            <svg id="masterPlayIcon" width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+          </button>
+          <div class="time-display">
+            <span id="currentTime">00:00</span> / <span id="totalTime">00:00</span>
+          </div>
+          <div class="timeline-container">
+            <input type="range" id="masterTimeline" min="0" max="100" value="0" step="0.1" class="timeline-slider" />
+          </div>
+          <button id="btnResetMix" class="btn-secondary-sm" title="Restablecer volumenes">Reiniciar Mezcla</button>
+        </div>
+
+        <!-- Lista de Pistas / Mixer Multipista -->
+        <div class="stems-grid">
+          <!-- 1. Vocales -->
+          <div class="stem-row" data-stem="vocals">
+            <div class="stem-badge stem-vocals">🎤</div>
+            <div class="stem-meta">
+              <h4>Vocales (Vocals)</h4>
+              <span>Voz líder y armonías aisladas</span>
+            </div>
+            <div class="stem-controls">
+              <button class="btn-track-toggle btn-mute" title="Silenciar">MUTE</button>
+              <button class="btn-track-toggle btn-solo" title="Escuchar solo esta pista">SOLO</button>
+              <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" title="Volumen" />
+            </div>
+            <a class="btn-stem-download" href="#" target="_blank" title="Descargar WAV">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>WAV</span>
+            </a>
+          </div>
+
+          <!-- 2. Karaoke / Instrumental Completo -->
+          <div class="stem-row" data-stem="karaoke">
+            <div class="stem-badge stem-karaoke">🎶</div>
+            <div class="stem-meta">
+              <h4>Karaoke (Instrumental)</h4>
+              <span>Canción completa sin la voz</span>
+            </div>
+            <div class="stem-controls">
+              <button class="btn-track-toggle btn-mute" title="Silenciar">MUTE</button>
+              <button class="btn-track-toggle btn-solo" title="Escuchar solo esta pista">SOLO</button>
+              <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" title="Volumen" />
+            </div>
+            <a class="btn-stem-download" href="#" target="_blank" title="Descargar WAV">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>WAV</span>
+            </a>
+          </div>
+
+          <!-- 3. Batería -->
+          <div class="stem-row" data-stem="drums">
+            <div class="stem-badge stem-drums">🥁</div>
+            <div class="stem-meta">
+              <h4>Batería (Drums)</h4>
+              <span>Bombo, caja, platillos y percusión</span>
+            </div>
+            <div class="stem-controls">
+              <button class="btn-track-toggle btn-mute" title="Silenciar">MUTE</button>
+              <button class="btn-track-toggle btn-solo" title="Escuchar solo esta pista">SOLO</button>
+              <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" title="Volumen" />
+            </div>
+            <a class="btn-stem-download" href="#" target="_blank" title="Descargar WAV">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>WAV</span>
+            </a>
+          </div>
+
+          <!-- 4. Bajo -->
+          <div class="stem-row" data-stem="bass">
+            <div class="stem-badge stem-bass">🎸</div>
+            <div class="stem-meta">
+              <h4>Bajo (Bass)</h4>
+              <span>Línea de bajo eléctrico y sub-graves</span>
+            </div>
+            <div class="stem-controls">
+              <button class="btn-track-toggle btn-mute" title="Silenciar">MUTE</button>
+              <button class="btn-track-toggle btn-solo" title="Escuchar solo esta pista">SOLO</button>
+              <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" title="Volumen" />
+            </div>
+            <a class="btn-stem-download" href="#" target="_blank" title="Descargar WAV">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>WAV</span>
+            </a>
+          </div>
+
+          <!-- 5. Otros -->
+          <div class="stem-row" data-stem="other">
+            <div class="stem-badge stem-other">🎹</div>
+            <div class="stem-meta">
+              <h4>Otros Instrumentos (Other)</h4>
+              <span>Guitarras, teclados, sintes y efectos</span>
+            </div>
+            <div class="stem-controls">
+              <button class="btn-track-toggle btn-mute" title="Silenciar">MUTE</button>
+              <button class="btn-track-toggle btn-solo" title="Escuchar solo esta pista">SOLO</button>
+              <input type="range" class="vol-slider" min="0" max="1" step="0.05" value="1" title="Volumen" />
+            </div>
+            <a class="btn-stem-download" href="#" target="_blank" title="Descargar WAV">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
+              <span>WAV</span>
+            </a>
+          </div>
+        </div>
+
+        <div class="action-footer">
+          <button id="btnNewConversion" class="btn-secondary">
+            🔄 Separar Otra Canción o Video
+          </button>
+        </div>
+      </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="app-footer">
+      <p>Disband AI • Procesamiento 100% Local y Privado en tu PC • Motor Demucs v4 de Meta AI Research</p>
+    </footer>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
